@@ -10,6 +10,9 @@ The choice of platform is made automatic, but due to the android (?Mac) chromati
 when assembling for MacOS, you may have to comment out some sections of the code.
 They are all marked in the code.
 
+You can try to build it for Web, but it is not recommended.
+You can try to use AnimationController for cursor moving and give some of the work to the GPU (see test file) for a smoother beat duration.
+
 lib - Dart source code.
 
 assets - audio samples.
