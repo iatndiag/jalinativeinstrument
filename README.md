@@ -10,8 +10,8 @@ The choice of platform is made automatic, but due to the android (?Mac) chromati
 when assembling for MacOS, you may have to comment out some sections of the code.
 They are all marked in the code.
 
-lib - Dart source code
-assets - audio samples
-!CSV TSV - music by ear
-ExeApkApp - assembled project
+lib - Dart source code.
+assets - audio samples.
+!CSV TSV - music by ear.
+ExeApkApp - assembled project.
 
