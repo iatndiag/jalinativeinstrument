@@ -1,0 +1,5 @@
+1) Open CSV with excel macro, all contents will be copied to notepad
+2) Open GoogleSheets and just paste it into new spreadsheet
+3) Save file in TSV format
+
+Note: here you can also save file in PDF, HTML and OpenOffice formats
