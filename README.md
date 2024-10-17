@@ -1,4 +1,4 @@
-Look at the folder "CSV TSV" where you will find the notation (music by ear)!
+Look at the folder "Code/!CSV TSV" where you will find the notation (music by ear)!
 West-African musical instrument Harp Kora is... read about it on the Internet.
 
 The project is a notation player from csv/tsv files and an editor macro in Excel Windows
