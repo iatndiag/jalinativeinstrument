@@ -6,7 +6,13 @@
 // DART-Lang, Musical Tuition Project: African Harp Kora : Player, NotationReader, Tuner:  multi-Platform //
 //********************************************************************************************************//
 /////////////////////////////////////////////////
-import '../custom_painters/various_painters.dart';
+import 'dart:developer' as developer;
+import 'dart:isolate';
+import 'package:jalinativeinstrument/utils/color_utils.dart';
+import 'audio/audio_isolate.dart';
+import 'constants/app_constants_nd_vars.dart';
+import 'audio/audio_data.dart';
+import 'custom_painters/various_painters.dart';
 import 'dart:developer' as myDeveloper;                           // for logging  (debug printing in a log-file, works differently than print)
 import 'package:desktop_window/desktop_window.dart';              // setting Window Size for Desktop App (Win, Linux, MacOS)
 import 'package:flutter/gestures.dart';
@@ -54,7 +60,7 @@ import 'package:tonic/tonic.dart' as tonic;   // for native Web JS playNote meth
 //   import 'dart:js' as js;    // for native Web JS playNote method (2 of 2), //toDo: comment if build Windows
 //-----------------------------------------------------------_//
 //import 'package:flutter_fgbg/flutter_fgbg.dart'; // Foreground/Background; iOS, Android: Stop Play if App is in Background // used "extends with WidgetBindingObserver" instead of this
-import 'package:jalinativeinstrument/widgets/dropdown_tuningFromDropDown_box.dart';     // custom drop-down menu
+import 'package:jalinativeinstrument/widgets/dropdown_tuningFromDropDown_box.dart' hide WIDTH_2, WIDTH_1;     // custom drop-down menu
 import 'dart:async' show Future, Timer;
 import 'package:async/async.dart';                        // for cancelable operation
 import 'dart:ffi' hide Size;                              // Hide Size !!!   Needed !!!  It contains also in dart:io    !!!  Do not delete !!
@@ -101,273 +107,6 @@ import 'package:http/http.dart' as http;    //flutter pub add http
 // (here was import from this Link)
 // import removed, you can find it any time by this link
 //
-// toDo: Build Options, choose depending on Build Platform before starting build:
-// INTO VOID MAIN() ADDED AUTOMATICALLY CHOSE OF PLATFORM (WIN,ANDROID,MACOS,IOS,LINUX), SO SIMPLY USE "FLUTTER BUILD APK", "FLUTTER BUILD WINDOWS", ("FLUTTER BUILD APK --no-tree-shake-icons", "FLUTTER BUILD WINDOWS --no-tree-shake-icons")
-// AUTOMATIC SWITCH SOLUTION FOUND: SEE VOID MAIN()  !!!                        USE DOUBLE SPACE or DOUBLE SLASH     for Comment/Uncomment
-////////////////////////////////////////////   Build Options  //////////////////////////////////////////// Recommended variants: 1,2 and 5
-//   int csvMode = 1; int playerMode = 2; int extension = 1;  double mS =  10; // Windows---WAV--***EXE   (some notes stop sounding on Android, so for Android - another build option)  SEE ALSO: debugDefaultTargetPlatformOverride  in Void Main !!!!   (if plays Slow, it's Power Save Mode of Notebook)
-int csvMode = 1; int playerMode = 1; int extension = 1;  double mS =  10; // Android,MacOS---WAV--***APK, MacOS***APP,***DMG, yes you can create DMG (like installer) via Node.js "create-dmg"      (if plays Slow, it's hash table mode, comment Windows)
-//   int csvMode = 2; int playerMode = 4; int extension = 3;  double mS = 22;  // Web-Synth-Tone.JS-***JS toDo: (add manually Script to index.html) Many setState() cause Noise! Sounds like web midi Synth without delay at all
-//// int csvMode = 2; int playerMode = 1; int extension = 2;  double mS = 22;  // Web------m4a--------   (too slow! Do not use this at all, sound disappear)
-//   int csvMode = 2; int playerMode = 5; int extension = 3;  double mS =  6;  // Web--m4a-via-Tone.JS***JS toDo: (1 of 4: add manually Script to index.html; 2 of 4: add manually Script to index.html) Works Great! To protect JS code from copying recommends (try to) transfer JavaScript to TypeScript
-//   int csvMode = 2; int playerMode = 6; int extension = 3;  double mS =  6;  // Linux, and maybe MacOS
-//  toDo: (3 of 4): if you use "Web--m4a-via-Tone.JS--JS" then in file "dropdown_tuningFromDropDown_box.dart" leave only "Ionian", "Lydian" (only those listed in JavaScript)
-//  toDo: Minimum setState()'s !!! Slows Down!  // Tone.js make insignificant Noise // Commented: Midi 14Mb SF2 Asset was Commented "#" in pubspec.yaml to reduce APK
-//  toDo: (4 of 4): if you build Web/Windows: un-/comment import "dart:js" and js.context.callMethod("playNoteSynth ... and js.context.callMethod("playNote ... methods  AND "import dart:js" // (Windows will not work with dart:js)
-//   int csvMode = 2; int playerMode = 3; int extension = 3; const double mS = 19; // Android, iOS ----Midi SF2  // (int "extension" you may not specify)
-//   also special const "!kIsWeb" from foundations may be used to check if compiled for web     // Midi functions commented, but they worked well
-////////////
-//
-////  int csvMode = 1;                 //   =1 Android, Windows (Load File from Any place)   ?iOS?
-////  int csvMode = 2;                 //   =2 Web: Only One File from assets                ?iOS?
-//                                     //
-////  int playerMode = 1;              //   =1 Android (simple Player, 350Mb, No Memory Leaks at all)         ?Web?
-////  int playerMode = 2;              //   =2 Windows (Memory Leak more than 1Gb if not use this solution: hashTable of keys:AudioPlayers)
-//                                                    Memory Leak Win successfully resolved!
-// toDo: select with what kind of playing functions build project (playing wav,m4a,none,mp3)
-//  int extension = 1; // using WAV     (62 Mb, perfect quality; Android, Windows,   ?iOS?) toDo: select build with: WAV, m4a or MP3
-//  int extension = 2; // using m4a     (5,5 Mb poor quality, maybe Web)
-//  int extension = 3; // silent, without calling players at all     (maybe for Web, audio imports can be removed)
-//  int extension = 4; // using mp3     (10 Mb, middle quality, any application)
-/////////////////////////////////////////////// End Build Options ////////////////////////////////////////
-/////////////////////////////////////////////// Declare Global Variables: ////////////////////////////////////////////////////////////////
-// var player = AudioPlayer();                                        // if declare here, sounds non-simultaneously
-// final player = AudioPlayer()..setReleaseMode(ReleaseMode.stop);    // ReleaseMode you may not specify
-// List<AudioPlayer> audioPlayersList = [];                           // List of audioplayers, to dispose or release each one personally
-const int mSsW = 4; // minimum possible additional delay for every bit until stopwatch elapsedMilliseconds < 200
-Map <String,AudioPlayer> audioPlayersMap = {};       // Map of many AudioPlayerS  Windows
-Map <String,AudioPlayer> audioPlayersMapLinux = {};  // can not use <int> !!!   Map of many AudioPlayerS Linux (planned 5..10 to dispose and prevent multiple volume regulators)
-String dropdownValue = "Lydian (F) Aeol(A) Dor(D)";       // default tuning for Drop Down Menu
-double fontSize = 18.0;                // default font size, Left and Right buttons Text
-double fontSizeCnt = 16.0;             // "cents" of the tuning
-int pxlsWidth = 600;     // it's Not a Pixels!!! default boundary width, for values less than or greater than Switches Text Alignment
-double noteVolume = 0.9; // default personal volume of each note, or common volume (if value does not change while playing), =0.1,0.2...0.9,1.0; default =0.9
-double noteVolumeBack = noteVolume; // to restore volume after stop, so that the sound of pressing individual buttons can be heard
-double tempoCoeff = 1.0;            // global tempo coefficient, extends tempo range, default =1
-// toDo: delay stall at a correction factor higher then 1.3
-// const double mS = 19;   //ms 70/3=23    Windows, Android, Web, ?iOS?    // minimum possible duration, ms  (for measure tempo tuning) mS 70
-// const mS = 5;           //ms 0         ?Web -No                         // 5mS is excessively small, and 19mS is optimal; do NOT try WEB  mS 5
-// toDo: End Build Options
-bool isReadOnce = false;  // for suggested variant of tuning read from csv
-int maxNotEmptyPos = 1;   // for list size and text on button measure
-String measureBtnTx = 'Measures 1 - ...';       // text on button measure
-String LoadCSVBtnTx = 'Load csv/tsv file, web'; // text on button load
-String tempperformrsInfo = '';          // performers info
-int stringsNum = 21;                    // default number of strings, default =21
-const int stringsNumExcel = 22;         // allways 22 rows in Excel file
-String file1 = 'assets/csv/sample01.csv';                   // Type String
-File notationCsvFile = new File(file1);                     // Type File
-double crntSldrValT = 1.0;                                    // Tempo Slider default value =1.0
-bool toggleIcnMsrBtn = true;                                  // toggle (switch) Play|Stop Icon on TextButton
-bool fromTheBegin = false;                                    // toggle (switch) Play|Stop from the begin of the file or from the begin of the current table view
-int maxLength = 1;                                            // max Length of List to PlaySound
-/////Change it here:///////// !!! strict EVEN, Not Odd /////////// Notation Table Columns Number:    // Widget Rebuild with thousands elements is very expensive!!!
-int nTTcolSHalf  = 8;    //default:8 is quarter of 64view (could be: 8,16,32,64...till slow down)    // notation Table Columns Number (number of bits)
-//////////////////////////////////////////////////////////////////
-int  isSwitched_32_64_128 = 64;  // 32   64   128                           // switching by short press and
-int  mode_3264_or_64128 = 3264;  // 3264    64128                           // by a long press
-int nTTcolSN = 2*nTTcolSHalf;       // 64
-int nTcolS = nTTcolSN;              // Normal or Default 64
-int nTTcolSDouble = 2*nTTcolSN;     // 128
-var rngEnd = 4*nTTcolSN;            // for 64  is  128        // end range of the RangeSlider Depends on Cols Number (allways x2   32 is 64   64 is 128   128 is 256)
-int playingBit = 1;                                           // currently playing bit (j) by playFromList() for cursor visualize
-double centralColumnHeaderHeigth = 20;                        // central column above table block height
-double nTtbLHeight = 126;   //toDo: put table into Container  // tailored height of the Notation Table (depends of edge insets=1 and font size=3)
-//                  // cols1 is allways 22 (does not matter settings parameter number of strings)
-const cols1 = 22;   // The Best Way to initialize filled List // Number of cells vertically in empty table (transpose!)
-// it works also with 2*nTcolS, but when we changing view from 32 to 64 with empty data1, error occurs, so 4*nTcolS:
-int rows1 = 4*nTcolS;   //default:64. To prevent index error  // Number of cells horizontally in empty table
-final array1 = List.generate(rows1,(i) => List.generate(cols1 + 1, (j) => '', growable: true), growable: true); // fill up with '' ALL the list; the best way to fill up the List
-  List<dynamic> data1 = List.from(array1).transpose;            // List for NotationTable
-  List<dynamic> csvLst = [];                                    // List for Main Loops
-//List<dynamic> data2 = [];                                     // List for ... reserved
-////////////////////////////////////////// Used in DropDown Menu Too, part 1 of 3//////////////////
-Map<int,String> tuneMap = {   // Names must match in all three lists and default in dropdownValue variable!!!
-  1 : "Aeolian (F) Phrygian (C)",              // SEE: Clamp(1,15)  !!!
-  2 : "Hardino (F) Major",
-  3 : "Ionian (F) Major Phryg.(A)",
-  4 : "Lydian (F) Aeol(A) Dor(D)",
-  5 : "Aeolian (B) Phryg (F#)",
-  6 : "Sauta (Major, augm. 4th)",
-  7 : "Silaba (extreme)",
-  8 : "Silaba or Tomora ba (F) Maj",
-  9 : "Tomora Mesengo (F) Minor",
-  11: "Ionian (F) (Malian kora)",
-  12: "Lydian (F) (Malian kora)",
-  14: "Dorian (F) Lydian (Ab)",
-  15: "Mixolydian (F)",
-  16: "Lydian (Bb) MixLyd(C) Aeol(D)"
-};
-Map<String,int> tuneMapRvrsd = {    // SEE: selectedtuningNum   is number of Row-element in  krSnd 3-D List
-  "Aeolian (F) Phrygian (C)" : 1,                    // SEE: "TUNING MATCHING WITH THE LIST ROW NUMBER" in the playSound()
-  "Hardino (F) Major" : 2,
-  "Ionian (F) Major Phryg.(A)" : 3,
-  "Lydian (Bb) MixLyd(C) Aeol(D)": 3,
-  "Lydian (F) Aeol(A) Dor(D)" : 4,
-  "Aeolian (B) Phryg (F#)" : 5,
-  "Sauta (Major, augm. 4th)" : 6,
-  "Silaba (extreme)" : 7,
-  "Silaba or Tomora ba (F) Maj" : 8,
-  "Tomora Mesengo (F) Minor" : 9,
-  "---" : 4,
-  "Ionian (F) (Malian kora)" : 11,
-  "Lydian (F) (Malian kora)" : 12,
-  "Dorian (F) Lydian (Ab)" : 14,
-  "Mixolydian (F)" : 15
-};       // if "---" then: default Lydian (4)
-//List<String> droptuningList = <String>[];
-  List<String> droptuningList = <String>[  // we can send this List from the main.dart to dropdown...dart file
-    'Aeolian (F) Phrygian (C)',                             // Names must match in all three lists !!!
-    'Hardino (F) Major',
-    'Ionian (F) Major Phryg.(A)',
-    'Lydian (F) Aeol(A) Dor(D)',
-    'Aeolian (B) Phryg (F#)',
-    'Sauta (Major, augm. 4th)',
-    'Silaba (extreme)',
-    'Silaba or Tomora ba (F) Maj',
-    'Tomora Mesengo (F) Minor',
-    '---',
-    'Ionian (F) (Malian kora)',
-    'Lydian (F) (Malian kora)',
-    '---',
-    'Dorian (F) Lydian (Ab)',
-    'Mixolydian (F)',
-    'Lydian (Bb) MixLyd(C) Aeol(D)',
-    '---',
-    '---',
-  ];      // See Dropdown tuning file in the middle !!!
-/////////////////// Web Only: /////////////////
-/*
-  List<String> droptuningList = <String>[
-    'Ionian (F) Major Phryg.(A)',
-    'Lydian (F) Aeol(A) Dor(D)',
-    '---'
-  ];
- */
-/////////////////// end Web ///////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
-//////// non-default buttons labels and colours:      // List begins from 0 and ends at 23 (summary 24 elements) !!!  Null error in widget solution is 0:""
-Map<int,String> stringsDiamMapVariant1 = {0:"",1:"0.55mm",2:"0.55mm",3:"0.55mm",4:"0.55mm",5:"0.6mm",6:"0.6mm",7:"0.7mm",8:"0.7mm",9:"0.7mm",10:"0.8mm",11:"0.8mm",12:"0.9mm",13:"1.0mm",14:"1.0mm",15:"1.2mm",16:"1.2mm",17:"1.3mm",18:"1.4mm",19:"1.5mm",20:"1.6mm",21:"1.7mm",22:"2.2mm",23:"-mm"};
-Map<int,String> stringsDiamMapVariant2  = {0:"",1:"0.50mm",2:"0.50mm",3:"0.50mm",4:"0.65mm",5:"0.65mm",6:"0.65mm",7:"0.75mm",8:"0.75mm",9:"0.75mm",10:"0.85mm",11:"0.85mm",12:"1.0mm",13:"1.0mm",14:"1.0mm",15:"1.2mm",16:"1.2mm",17:"1.2mm",18:"1.4mm",19:"1.4mm",20:"1.6mm",21:"1.6mm",22:"1.8-2.0",23:"-mm"};
-Map<int,String> stringsLbMapToVariant2   = {0:"",1:"30 lb",2:"30 lb",3:"30 lb",4:"40 lb",5:"40 lb",6:"40 lb",7:"60 lb",8:"60 lb",9:"60 lb",10:"70 lb",11:"70 lb",12:"100 lb",13:"100 lb",14:"100 lb",15:"120 lb",16:"120 lb",17:"120 lb",18:"160 lb",19:"160 lb",20:"180 lb",21:"180 lb",22:"200-300 lb",23:"- lb"};
-void fillVariant1ColorsList() {
-  if(themeappLightDark==1) {
-  keysColorsList[1]=keysColorsList[2]=keysColorsList[3]=keysColorsList[4]=Colors.blueGrey;
-  keysColorsList[5]=keysColorsList[6]=Colors.deepPurpleAccent;
-  keysColorsList[7]=keysColorsList[8]=keysColorsList[9]=Colors.red;
-  keysColorsList[10]=keysColorsList[11]=Colors.brown;
-  keysColorsList[12]=Colors.green;
-  keysColorsList[13]=keysColorsList[14]=Colors.blue;
-  keysColorsList[15]=keysColorsList[16]=Colors.pink;
-  keysColorsList[17]=Colors.deepPurpleAccent;
-  keysColorsList[18]=Colors.blue;
-  keysColorsList[19]=Colors.red;
-  keysColorsList[20]=Colors.green; keysColorsList[21]=Colors.black54; keysColorsList[22]=Colors.blueGrey; keysColorsList[23]=Colors.blueGrey;
-  } else {
-    keysColorsList[1]=keysColorsList[2]=keysColorsList[3]=keysColorsList[4]=_JaliinstrumentState.invertCustom(Colors.blueGrey!);
-    keysColorsList[5]=keysColorsList[6]=_JaliinstrumentState.invertCustom(Colors.deepPurpleAccent);
-    keysColorsList[7]=keysColorsList[8]=keysColorsList[9]=_JaliinstrumentState.invertCustom(Colors.red);
-    keysColorsList[10]=keysColorsList[11]=_JaliinstrumentState.invertCustom(Colors.brown);
-    keysColorsList[12]=_JaliinstrumentState.invertCustom(Colors.green);
-    keysColorsList[13]=keysColorsList[14]=_JaliinstrumentState.invertCustom(Colors.blue);
-    keysColorsList[15]=keysColorsList[16]=_JaliinstrumentState.invertCustom(Colors.pink);
-    keysColorsList[17]=_JaliinstrumentState.invertCustom(Colors.deepPurpleAccent);
-    keysColorsList[18]=_JaliinstrumentState.invertCustom(Colors.blue);
-    keysColorsList[19]=_JaliinstrumentState.invertCustom(Colors.red);
-    keysColorsList[20]=_JaliinstrumentState.invertCustom(Colors.green); keysColorsList[21]=_JaliinstrumentState.invertCustom(Colors.black54); keysColorsList[22]=_JaliinstrumentState.invertCustom(Colors.blueGrey); keysColorsList[23]=_JaliinstrumentState.invertCustom(Colors.blueGrey);
-  }
-} //end variant1
-void fillVariant2ColorsList() {
-  if(themeappLightDark==1) {
-  keysColorsList[1]=keysColorsList[2]=keysColorsList[3]=Colors.blueGrey;
-  keysColorsList[4]=keysColorsList[5]=keysColorsList[6]=Colors.deepPurpleAccent;
-  keysColorsList[7]=keysColorsList[8]=keysColorsList[9]=Colors.red;
-  keysColorsList[10]=keysColorsList[11]=Colors.cyan;
-  keysColorsList[12]=keysColorsList[13]=keysColorsList[14]=Colors.blue;
-  keysColorsList[15]=keysColorsList[16]=keysColorsList[17]=Colors.pink;
-  keysColorsList[18]=keysColorsList[19]=Colors.blue;
-  keysColorsList[20]=Colors.green; keysColorsList[21]=Colors.black54; keysColorsList[22]=Colors.blueGrey; keysColorsList[23]=Colors.blueGrey;
-  } else {
-    keysColorsList[1]=keysColorsList[2]=keysColorsList[3]=_JaliinstrumentState.invertCustom(Colors.blueGrey);
-    keysColorsList[4]=keysColorsList[5]=keysColorsList[6]=_JaliinstrumentState.invertCustom(Colors.deepPurpleAccent);
-    keysColorsList[7]=keysColorsList[8]=keysColorsList[9]=_JaliinstrumentState.invertCustom(Colors.red);
-    keysColorsList[10]=keysColorsList[11]=_JaliinstrumentState.invertCustom(Colors.cyan);
-    keysColorsList[12]=keysColorsList[13]=keysColorsList[14]=_JaliinstrumentState.invertCustom(Colors.blue);
-    keysColorsList[15]=keysColorsList[16]=keysColorsList[17]=_JaliinstrumentState.invertCustom(Colors.pink);
-    keysColorsList[18]=keysColorsList[19]=_JaliinstrumentState.invertCustom(Colors.blue);
-    keysColorsList[20]=_JaliinstrumentState.invertCustom(Colors.green); keysColorsList[21]=_JaliinstrumentState.invertCustom(Colors.black54); keysColorsList[22]=_JaliinstrumentState.invertCustom(Colors.blueGrey); keysColorsList[23]=_JaliinstrumentState.invertCustom(Colors.blueGrey);
-  }
-} //end variant2
-//////// end non-default buttons labels and colours
-//// how to get key by value:
-//// var key1 = tuneMap.keys.firstWhere((k) => tuneMap[k] == tuningName, orElse: () => 4); // not work inside async,  reverse Map
-var reversedTuneMap = tuneMap.map((k, v) => MapEntry(v, k));  // reversed Map
-List<Map<String, bool>> buttonsPS = []; // List of Maps !!! State of the both side columns of buttons
-bool cancelDelay1 = false;
-List<String>csvListOfFiles = [];
-// List<Map<String, int>> bitStateList = []; // Not Used At All! // List of Maps !!! State of 1) notation table startBit, 2) animated cursor position
-List<Map<String, int>>        ntTblNtfrsList    = []; // List of Maps !!!  INT notifier
-List<Map<String, String>> strTxtNotifierList    = []; // List of Maps !!!  STRING notifier
-bool isSwitchedMonitorFile = false;            // file will be reloaded. Range, table change count and view will remain the same
-String tempSMonitor = '';                      // Keeping string csvFile path
-bool wasTSVextDetected = false;   // (Tab) is delimiter
-bool googleCSVdetected = false;   // (,) comma is delimiter       // for example, excel's delimiter is (;) semicolon
-bool oneTraversingInstanceLaunched = false;  // prevention of double- or even triple-start
-List<String> ntTableCaptionTxt_0 = ['',' long press available'];         // table caption text
-String ntTableCaptionTxt = '';                // NOT USED yet, for debug
-List<double> sym_font = [18, 12, 8];          // [android ,win, reserved]         font-size: in win '⬤' is larger than '●' in android
-List<List<String>> ntTableCaptionTxt_0_sym  = [['●','○','○'],['○','●','○'],['○','○','●']];       // List of the Lists //only for Android: 〇⬤〇     ⬤ is smaller than 〇
-List<List<String>> ntTableCaptionTxt_0_win  = [['⬤','〇','〇'],['〇','⬤','〇'],['〇','〇','⬤']]; // List of the Lists //only for Windows: ○●○     ● is smaller than ○
-String tapMadeOnUpperOrLowerTable = 'None';  // temp, only for Debug printing output
-bool hideControlsForScreenshotMode = false;  // hide sliders and buttons
-int buildKeysNotesOrFreqsMode = 0;            // 0 = display notes, 1 = display frequencies precisely (machine heads), 2 = display frequencies roughly (wooden pegs), 3 = strings diameter in mm
-double WIDTH_0 = 70;                          // custom paint at the central column, bottom
-double WIDTH_1 = 90;                          // wooden peg and measuring tool width for custom painter TWO (on upper right Button)
-double WIDTH_2 = 80;                          // machine head width for custom painter ONE
-// double WIDTH_3 = 50;                       // reserved
-double WIDTH_8 = 80;                          // vertical text label Jalinativeistriment, view from the Left
-double WIDTH_9 = WIDTH_8;                     // vertical text label Jalinativeistriment, view from the Right
-bool showVerticalBigLables = false;           // showing big vertical text labels Jalinativeistriment in Stack at the left ant at the right
-double WIDTH_10 = 50;                         // Find...
-double WIDTH_11 = 50;                         // Fingers: Index and Thumb
-double WIDTH_12 = 50;                         // Find...
-double WIDTH_13 = 50;                         // Find...
-double WIDTH_14 = 50;                         // Find...
-double WIDTH_15 = 240;                        // arrow with text "move left" for stack under the Range Slider (shown after Completion Naturally)
-bool showArrowMoveToTheLeft=false;            // true = show arrow with text "move left"
-bool showNavButtonsForThreeSeconds=false;     // true = show Navigate Buttons (to Change Up and Down Measure Number)
-dynamic restartableTimer1;                    // try to use restartable timer to increase time to nav buttons hide. Or you can use "var" instead of "dynamic"
-List<int> showFingeringOnButtons = [];        // show Index fingers = 1 and Thumb fingers = 0 on buttons in stack (right or left by context: buildKeyRight or buildKeyLeft)
-List<Color> keysColorsList = [];              // text on keys and guestures press button effect background colors
-String crc32trackPerfInfo = '';               // checksum of track_performer info string
-String stringKeySharedPref = '';              // string key = crc32 checksum of track_performer info
-String stringValSharedPref = '';              // string value, contains last seen mode (32/64/128), measure number, selected range
-bool tapCollisionPrevention = false;          // so that the cursor doesn't run away, waiting for previous tapping ends
-bool clearRangeSharePref = false;             // for delete shared pref for opening file (keeping ranges individual for each file by performer's info CRC32 checksum) by Right coincidence of a Range Slider and pressing multi-purpose button
-bool clearRangeSharePrefA = false;
-bool isTunerModeEnable = false;               // central column (Width 54%) is used to show: 1) main table and controls, 2) tuner pitch up functions (Android and maybe iOS)
-String tunerNotSupportedTextPlatformDepending = "";
-String argument0 = '';                          // argument full file path for windows exe cmd arguments parse
-bool isTempoSliderDisabled = false;             // temporary disable Tempo Slider so as not to accidentally move it
-bool toShowVLbls = true;                        // show big side labels for 2 seconds
-bool wasShownVLblsOnce = false;                 // only at first start
-bool isFixNeededFlag = false;                 // when Tables onTab sometimes appears view change error, let's fix it
-bool willGoogleSpreadsheetBeLoaded = false;   // load Shared Google Spreadsheet with Notation
-bool isNowGoogleSpreadsheetLoaded = false;    // for Online monitor button text does not change to File monitor
-String googleSpreadsheetLink = '';            // shared google spreadsheet (first 256-cols will be loaded) or link to google app script (get function with deployment) (all range will be loaded)
-///////////////////////////////////////////////////////////////////////// custom materialColour: see "Background of Objects: custom materialColour" at MaterialApp returning
-extension ToMaterialColor on Color {                                                      // not work ???  or Not Needed?
-  MaterialColor get asMaterialColor {
-    Map<int, Color> shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]            // because MaterialColor requires shades
-        .asMap()
-        .map((key, value) => MapEntry(value, withOpacity(1 - (1 - (key + 1) / 10))));
-    return MaterialColor(value, shades);
-  }
-}                                                                                         // all block not work ???  or Not Needed?
-/////////////////////////////////////////////////////////////////////////
-int themeappLightDark = 2; // Application Theme:  1 = default(light)   2 = dark          See invertCustom() function
-// New global variables add here
-///////////////////////////////////////////// End Global Variables declaration and assignment ///////////////////////////////////////////
 //
 //void main() {                                            // was without command line arguments               Adnroid
 void main(List<String> arguments) {                        // with List of Win exe command line arguments  Windows
@@ -443,6 +182,11 @@ class _JaliinstrumentState extends State<Jaliinstrument> with WidgetsBindingObse
   // FocusAttachment nodeAttachment;
   // nodeAttachment = measuresButtonFocusNode.attach(context, onKey: _handleKeyPress);
 //
+///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 2 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
+  Isolate? _playerIsolate;
+  SendPort? _sendPortToPlayer;
+  ReceivePort? _receivePortFromPlayer;
+/////// end NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 2 OF 3
 //
   FlutterAudioCapture _audioRecorder = new FlutterAudioCapture();  // NEW recorder from audio_capture 1 of 4
 //
@@ -538,50 +282,6 @@ void playNote(String note) {            // simple JS tonic
 //             super.initState();
 //                            }
 //
-  void fillDefaultColorsList() {
-    ///////////////////////////////////////////// keys Colors: /////////////////////////////////////////////
-    Color key0Color = Colors.blueGrey;
-    Color key1Color = Colors.red;
-    Color key2Color = Colors.green;
-    Color key3Color = Colors.blue;
-    Color key4Color = Colors.red; // Left
-    Color key5Color = Colors.deepPurpleAccent;
-    Color key6Color = Colors.green; // Left
-    Color key7Color = Colors.redAccent;
-    Color key8Color = Colors.blue; // Left
-    Color key9Color = Colors.black54;
-    Color key10Color = Colors.deepPurpleAccent; // Left
-    Color key11Color = Colors.pink;
-    Color key12Color = Colors.redAccent; // Left
-    Color key13Color = Colors.red;
-    Color key14Color = Colors.black54; // Left
-    Color key15Color = Colors.green;
-    Color key16Color = Colors.pink; // Left
-    Color key17Color = Colors.blue;
-    Color key18Color = Colors.red; // Left
-    Color key19Color = Colors.green; // Left
-    Color key20Color = Colors.blue; // Left
-    Color key21Color = Colors.deepPurpleAccent;
-    Color key22Color = Colors.deepPurpleAccent; // Left
-    Color key23Color = Colors.blueGrey; // Left
-////// keyColors List for filling: //////
-    keysColorsList.clear();    // List begins from 0 and ends at 23 (summary 24 elements) !!!
-    keysColorsList.add(key0Color );keysColorsList.add(key1Color );keysColorsList.add(key2Color );keysColorsList.add(key3Color );
-    keysColorsList.add(key4Color );keysColorsList.add(key5Color );keysColorsList.add(key6Color );keysColorsList.add(key7Color );
-    keysColorsList.add(key8Color );keysColorsList.add(key9Color );keysColorsList.add(key10Color);keysColorsList.add(key11Color);
-    keysColorsList.add(key12Color);keysColorsList.add(key13Color);keysColorsList.add(key14Color);keysColorsList.add(key15Color);
-    keysColorsList.add(key16Color);keysColorsList.add(key17Color);keysColorsList.add(key18Color);keysColorsList.add(key19Color);
-    keysColorsList.add(key20Color);keysColorsList.add(key21Color);keysColorsList.add(key22Color);keysColorsList.add(key23Color);
-    /////////////////////////////////////////// End keys Colors ///////////////////////////////////////////
-  }
-  void fillDefaultFingeringList() { // zero element and 24-th element are ignored (they are not music keys)
-    showFingeringOnButtons.add(1);showFingeringOnButtons.add(1);showFingeringOnButtons.add(1);showFingeringOnButtons.add(1);
-    showFingeringOnButtons.add(1);showFingeringOnButtons.add(1);showFingeringOnButtons.add(1);showFingeringOnButtons.add(1);
-    showFingeringOnButtons.add(1);showFingeringOnButtons.add(1);showFingeringOnButtons.add(1);showFingeringOnButtons.add(0);
-    showFingeringOnButtons.add(0);showFingeringOnButtons.add(0);showFingeringOnButtons.add(0);showFingeringOnButtons.add(0);
-    showFingeringOnButtons.add(0);showFingeringOnButtons.add(0);showFingeringOnButtons.add(0);showFingeringOnButtons.add(0);
-    showFingeringOnButtons.add(0);showFingeringOnButtons.add(0);showFingeringOnButtons.add(0);showFingeringOnButtons.add(1);
-  }
   //
   void instantlyLoadCSVwinCMD() async {
       //       showAlertDialog1(BuildContext context) {   // alert dialog template
@@ -613,6 +313,9 @@ void playNote(String note) {            // simple JS tonic
 //////////
     // themeappLightDarkChange(false);  //ASYNC cannot be there until the List will not be Filled!
     //
+///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 1 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
+    _setupPlayerIsolate(1, 1, [], csvLst, 1, false);
+/////// end NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 1 OF 3
     _audioRecorder.init();              // Initialize NEW recorder from audio_capture 2 of 4
     //
     initStateFunctions();       //CALL
@@ -834,7 +537,7 @@ void playNote(String note) {            // simple JS tonic
           //                                        // if successfully loaded by Pickin Up then. TRY CATCH WORKS SO: code after "await..." will not execute if error
           willGoogleSpreadsheetBeLoaded = false;    // if file and tags was loaded Successfully, then turning OFF HTTP function (if it before was turned ON)
           isNowGoogleSpreadsheetLoaded = false;     // for Online monitor button text does not change to File monitor
-print('local file loaded successfully');
+// print('local file loaded successfully');
           argument0 = ''; setState(() {});    // let's forget about our player was launched from Excel with the path parameter
           //
         } catch (e) {
@@ -1189,7 +892,7 @@ print('local file loaded successfully');
       } // end for (j)
       if (isFound == true) {maxNotEmptyPos = i + 0 + 0;  isFound = false;} else {}  // changed to   i + 0 + 0  try to break loop via mark "outerloop:" and keywork "break;"  // was (i + 1) because of last bit; (i + 1 + 1) because when stops, last bit should not sounds
     } // end for (i)
-print(csvLst); print(maxLength_1);    // DEBUG PRINT HERE 1
+// print(csvLst); print(maxLength_1);    // DEBUG PRINT HERE 1
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
     final List<dynamic>emptyFillingList_00a = List.generate(1,(i) => List.generate((cols1 + 1),(j) => '', growable: true), growable: true);
     if(maxLength_1==1) {dataF=[['', '','' , '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', ''],[' ', '','' , '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']];} else {}  //Prevention of range error if csv file is empty
@@ -1653,452 +1356,6 @@ if (Platform.isWindows) {
 ////////////////////////////////////////////////////////////////////////
 //tuning has been selected
 //
-//notation visual marks for visual display on buttons and in notation table
-//this is the First Place of Two, where (notes/frequencies/paths/colours) Data written direct in Source code
-//toDo: Lets complete keyTuning 8 and 9
-//  https://pages.mtu.edu/~suits/notefreqs.html
-  dynamic visualMarks (int tuningNum){          //its O'Kay to define function inside "Class", returning Type is "Dynamic"
-    switch (tuningNum) {                        //its O'Kay to use switch operator inside "function" that locates inside "Class"
-      case 1:                                   //Use (Alt + Shift + Selection) in Visual Studio CODE Editor to edit the table or Alt+VerticalSelection in Android Studio
-        final List<Map> keyTuning = [           //Samples could by made in "Audacity", "Melodyne" and "Foobar2000 encoders"
-          {'noteNum': 0,  'ntNote': '',          'ntCent': '',       'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A♭5',       'ntCent': '',       'ntFreq': '830.59', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA♭'},
-          {'noteNum': 2,  'ntNote': 'G5',        'ntCent': '',       'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',        'ntCent': '',       'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E♭5',       'ntCent': '',       'ntFreq': '622.24', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI♭'},
-          {'noteNum': 5,  'ntNote': 'C♯5',       'ntCent': '',       'ntFreq': '554.35', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'DO♯'},
-          {'noteNum': 8,  'ntNote': 'A♭4',       'ntCent': '',       'ntFreq': '415.29', 'ntMark': 'a', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'LA♭'},
-          {'noteNum': 6,  'ntNote': 'C5',        'ntCent': '',       'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',       'ntCent': '',       'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'SI♭'},
-          {'noteNum': 9,  'ntNote': 'G4',        'ntCent': '',       'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',        'ntCent': '',       'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E♭4',       'ntCent': '',       'ntFreq': '311.12', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI♭'},
-          {'noteNum': 12, 'ntNote': 'C♯4',       'ntCent': '',       'ntFreq': '277.18', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'DO♯'},
-          {'noteNum': 13, 'ntNote': 'C4',        'ntCent': '',       'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',       'ntCent': '',       'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A♭3',       'ntCent': '',       'ntFreq': '207.65', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA♭'},
-          {'noteNum': 16, 'ntNote': 'G3',        'ntCent': '',       'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',        'ntCent': '',       'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E♭3',       'ntCent': '',       'ntFreq': '155.56', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI♭'},
-          {'noteNum': 19, 'ntNote': 'C♯3',       'ntCent': '',       'ntFreq': '138.59', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'DO♯'},
-          {'noteNum': 20, 'ntNote': 'C3',        'ntCent': '',       'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',       'ntCent': '',       'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',        'ntCent': '',       'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',          'ntCent': '',       'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA♭ SOL FA MI♭ DO♯ LA♭ DO SI♭ SOL FA MI♭ DO♯ DO SI♭ LA♭ SOL FA MI♭ DO♯ DO SI♭ FA
-        // 21   B2_123 (123.47) Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 2:
-        final List<Map> keyTuning = [
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',        'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',     'ntCent': ' +5c',    'ntFreq': '882.52', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',     'ntCent': ' -15c',   'ntFreq': '777.21', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',     'ntCent': '',        'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E5',     'ntCent': '+5c ',    'ntFreq': '661.15', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'D5',     'ntCent': ' -15c',   'ntFreq': '582.25', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',     'ntCent': '',        'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',    'ntCent': '',        'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 8,  'ntNote': 'A4',     'ntCent': '+5c ',    'ntFreq': '441.26', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',     'ntCent': ' -15c',   'ntFreq': '388.60', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',     'ntCent': '',        'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E4',     'ntCent': ' +5c',    'ntFreq': '330.57', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'D4',     'ntCent': '-15c ',   'ntFreq': '291.12', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',     'ntCent': '',        'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',    'ntCent': '',        'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A3',     'ntCent': ' +5c',    'ntFreq': '220.63', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',     'ntCent': '-15c ',   'ntFreq': '194.30', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',     'ntCent': '',        'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E3',     'ntCent': '+5c ',    'ntFreq': '165.29', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'D3',     'ntCent': '-15c ',   'ntFreq': '145.56', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',     'ntCent': '',        'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',    'ntCent': '',        'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',     'ntCent': '',        'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',        'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA SOL FA MI RE DO SI♭ LA SOL FA MI RE DO SI♭ LA SOL FA MI RE DO SI♭ FA
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 3:
-        final List<Map> keyTuning = [
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',     'ntCent': '',     'ntFreq': '879.98', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',     'ntCent': '',     'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',     'ntCent': '',     'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E5',     'ntCent': '',     'ntFreq': '659.24', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'D5',     'ntCent': '',     'ntFreq': '587.32', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',     'ntCent': '',     'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',    'ntCent': '',     'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 8,  'ntNote': 'A4',     'ntCent': '',     'ntFreq': '439.99', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',     'ntCent': '',     'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',     'ntCent': '',     'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E4',     'ntCent': '',     'ntFreq': '329.62', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'D4',     'ntCent': '',     'ntFreq': '293.66', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',     'ntCent': '',     'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',    'ntCent': '',     'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A3',     'ntCent': '',     'ntFreq': '219.99', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',     'ntCent': '',     'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',     'ntCent': '',     'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E3',     'ntCent': '',     'ntFreq': '164.81', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'D3',     'ntCent': '',     'ntFreq': '146.83', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',     'ntCent': '',     'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',    'ntCent': '',     'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',     'ntCent': '',     'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA SOL FA MI RE DO SI♭ LA SOL FA MI RE DO SI♭ LA SOL FA MI RE DO SI♭ FA
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 4:
-        final List<Map> keyTuning = [
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',     'ntCent': '',     'ntFreq': '879.98', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',     'ntCent': '',     'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',     'ntCent': '',     'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E5',     'ntCent': '',     'ntFreq': '659.24', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'D5',     'ntCent': '',     'ntFreq': '587.32', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',     'ntCent': '',     'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B4',     'ntCent': '',     'ntFreq': '493.87', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI '},
-          {'noteNum': 8,  'ntNote': 'A4',     'ntCent': '',     'ntFreq': '439.99', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',     'ntCent': '',     'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',     'ntCent': '',     'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E4',     'ntCent': '',     'ntFreq': '329.62', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'D4',     'ntCent': '',     'ntFreq': '293.66', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',     'ntCent': '',     'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B3',     'ntCent': '',     'ntFreq': '246.94', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI '},
-          {'noteNum': 15, 'ntNote': 'A3',     'ntCent': '',     'ntFreq': '219.99', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',     'ntCent': '',     'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',     'ntCent': '',     'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E3',     'ntCent': '',     'ntFreq': '164.81', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'D3',     'ntCent': '',     'ntFreq': '146.83', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',     'ntCent': '',     'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B2',     'ntCent': '',     'ntFreq': '123.47', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI '},
-          {'noteNum': 22, 'ntNote': 'F2',     'ntCent': '',     'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA SOL FA MI RE DO SI LA SOL FA MI RE DO SI LA SOL FA MI RE DO SI FA
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 5:
-        final List<Map> keyTuning = [
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',     'ntCent': '',     'ntFreq': '879.98', 'ntMark': 'a', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',     'ntCent': '',     'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F♯5',    'ntCent': '',     'ntFreq': '739.97', 'ntMark': 'f', 'ntColor': '', 'step': 'V   ', 'named': 'Lenglong'     , 'ndrm': 'FA♯'},
-          {'noteNum': 4,  'ntNote': 'E5',     'ntCent': '',     'ntFreq': '659.24', 'ntMark': 'e', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'D5',     'ntCent': '',     'ntFreq': '587.32', 'ntMark': 'd', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C♯5',    'ntCent': '',     'ntFreq': '554.35', 'ntMark': 'c', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'DO♯'},
-          {'noteNum': 7,  'ntNote': 'B4',     'ntCent': '',     'ntFreq': '493.87', 'ntMark': 'b', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'SI '},
-          {'noteNum': 8,  'ntNote': 'A4',     'ntCent': '',     'ntFreq': '439.99', 'ntMark': 'a', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',     'ntCent': '',     'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F♯4',    'ntCent': '',     'ntFreq': '369.99', 'ntMark': 'f', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'FA♯'},
-          {'noteNum': 11, 'ntNote': 'E4',     'ntCent': '',     'ntFreq': '329.62', 'ntMark': 'E', 'ntColor': '', 'step': 'IV  ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'D4',     'ntCent': '',     'ntFreq': '293.66', 'ntMark': 'D', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C♯4',    'ntCent': '',     'ntFreq': '277.18', 'ntMark': 'C', 'ntColor': '', 'step': 'II  ', 'named': 'Jingkandango' , 'ndrm': 'DO♯'},
-          {'noteNum': 14, 'ntNote': 'B3',     'ntCent': '',     'ntFreq': '246.94', 'ntMark': 'B', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'SI '},
-          {'noteNum': 15, 'ntNote': 'A3',     'ntCent': '',     'ntFreq': '219.99', 'ntMark': 'A', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',     'ntCent': '',     'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F♯3',    'ntCent': '',     'ntFreq': '184.99', 'ntMark': 'F', 'ntColor': '', 'step': 'V   ', 'named': 'Timbango'     , 'ndrm': 'FA♯'},
-          {'noteNum': 18, 'ntNote': 'E3',     'ntCent': '',     'ntFreq': '164.81', 'ntMark': 'E', 'ntColor': '', 'step': 'IV  ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'D3',     'ntCent': '',     'ntFreq': '146.83', 'ntMark': 'D', 'ntColor': '', 'step': 'III ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C♯3',    'ntCent': '',     'ntFreq': '138.59', 'ntMark': 'C', 'ntColor': '', 'step': 'II  ', 'named': 'Dibong'       , 'ndrm': 'DO♯'},
-          {'noteNum': 21, 'ntNote': 'B2',     'ntCent': '',     'ntFreq': '123.47', 'ntMark': 'B', 'ntColor': '', 'step': 'I   ', 'named': 'Panchang'     , 'ndrm': 'SI '},
-          {'noteNum': 22, 'ntNote': 'F♯2',    'ntCent': '',     'ntFreq': '92.50',  'ntMark': 'F', 'ntColor': '', 'step': 'V   ', 'named': 'Bakumba'      , 'ndrm': 'FA♯'},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA SOL FA♯ MI RE DO♯ SI LA SOL FA♯ MI RE DO♯ SI LA SOL FA♯ MI RE DO♯ SI FA♯
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 6:
-        final List<Map> keyTuning = [
-          {'noteNum': 0,  'ntNote': '',     'ntCent': '',       'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',   'ntCent': ' +5c',   'ntFreq': '882.52', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',   'ntCent': ' -15c',  'ntFreq': '777.21', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',   'ntCent': '',       'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E5',   'ntCent': '+5c ',   'ntFreq': '661.15', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'D5',   'ntCent': ' -15c',  'ntFreq': '582.25', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',   'ntCent': '',       'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B4',   'ntCent': ' +5c',   'ntFreq': '495.30', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI '},
-          {'noteNum': 8,  'ntNote': 'A4',   'ntCent': '+5c ',   'ntFreq': '441.26', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',   'ntCent': ' -15c',  'ntFreq': '388.60', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',   'ntCent': '',       'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E4',   'ntCent': ' +5c',   'ntFreq': '330.57', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'D4',   'ntCent': '-15c ',  'ntFreq': '291.12', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',   'ntCent': '',       'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B3',   'ntCent': '+5c ',   'ntFreq': '247.65', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI '},
-          {'noteNum': 15, 'ntNote': 'A3',   'ntCent': ' +5c',   'ntFreq': '220.63', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',   'ntCent': '-15c ',  'ntFreq': '194.30', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',   'ntCent': '',       'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E3',   'ntCent': '+5c ',   'ntFreq': '165.29', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'D3',   'ntCent': '-15c ',  'ntFreq': '145.56', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',   'ntCent': '',       'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B2',   'ntCent': '',       'ntFreq': '123.47', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI '},
-          {'noteNum': 22, 'ntNote': 'F2',   'ntCent': '',       'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',     'ntCent': '',       'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA SOL FA MI RE DO SI LA SOL FA MI RE DO SI LA SOL FA MI RE DO SI FA
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 7:
-        final List<Map> keyTuning = [
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',      'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',     'ntCent': '',      'ntFreq': '879.98', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'A♭5',    'ntCent': '',      'ntFreq': '806.94', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'LA♭'},
-          {'noteNum': 3,  'ntNote': 'F5',     'ntCent': '',      'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E5',     'ntCent': '-20c ', 'ntFreq': '651.67', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'E♭5',    'ntCent': ' -40c', 'ntFreq': '608.03', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'MI♭'},
-          {'noteNum': 6,  'ntNote': 'C5',     'ntCent': '',      'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',    'ntCent': '',      'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 8,  'ntNote': 'A4',     'ntCent': '',      'ntFreq': '439.99', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'A♭4',    'ntCent': ' -50c', 'ntFreq': '403.47', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'LA♭'},
-          {'noteNum': 10, 'ntNote': 'F4',     'ntCent': '',      'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E4',     'ntCent': ' -20c', 'ntFreq': '325.83', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'E♭4',    'ntCent': '-40c ', 'ntFreq': '304.01', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'MI♭'},
-          {'noteNum': 13, 'ntNote': 'C4',     'ntCent': '',      'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',    'ntCent': '',      'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A3',     'ntCent': '',      'ntFreq': '219.99', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'A♭3',    'ntCent': '-50c ', 'ntFreq': '201.74', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'LA♭'},
-          {'noteNum': 17, 'ntNote': 'F3',     'ntCent': '',      'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E3',     'ntCent': '-20c ', 'ntFreq': '162.92', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'E♭3',    'ntCent': '-40c ', 'ntFreq': '152.01', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'MI♭'},
-          {'noteNum': 20, 'ntNote': 'C3',     'ntCent': '',      'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',    'ntCent': '',      'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',     'ntCent': '',      'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',      'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA LA♭ FA MI MI♭ DO SI♭ LA LA♭ FA MI MI♭ DO SI♭ LA LA♭ FA MI MI♭ DO SI♭ FA
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 8:
-        final List<Map> keyTuning = [
-          {'noteNum': 0,  'ntNote': '',     'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',   'ntCent': ' -15c','ntFreq': '872.39', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',   'ntCent': '',     'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',   'ntCent': '',     'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E5',   'ntCent': '-15c ','ntFreq': '653.55', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'D5',   'ntCent': '',     'ntFreq': '587.32', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',   'ntCent': '',     'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',  'ntCent': '',     'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 8,  'ntNote': 'A4',   'ntCent': '-15c ','ntFreq': '436.19', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',   'ntCent': '',     'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',   'ntCent': '',     'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E4',   'ntCent': ' -15c','ntFreq': '326.78', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'D4',   'ntCent': '',     'ntFreq': '293.66', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',   'ntCent': '',     'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',  'ntCent': '',     'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A3',   'ntCent': ' -15c','ntFreq': '218.10', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',   'ntCent': '',     'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',   'ntCent': '',     'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E3',   'ntCent': '-15c ','ntFreq': '163.39', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'D3',   'ntCent': '',     'ntFreq': '146.83', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',   'ntCent': '',     'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',  'ntCent': '',     'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',   'ntCent': '',     'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',     'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA SOL FA MI RE DO SI♭ LA SOL FA MI RE DO SI♭ LA SOL FA MI RE DO SI♭ FA
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 9:
-        final List<Map> keyTuning = [
-          {'noteNum': 0,  'ntNote': '',     'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A♭5',  'ntCent': ' +25c','ntFreq': '842.67', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA♭'},
-          {'noteNum': 2,  'ntNote': 'G5',   'ntCent': ' +30c','ntFreq': '797.68', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',   'ntCent': '',     'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E♭5',  'ntCent': '+25c ','ntFreq': '631.29', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI♭'},
-          {'noteNum': 5,  'ntNote': 'D5',   'ntCent': ' +30c','ntFreq': '597.58', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',   'ntCent': '',     'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',  'ntCent': '',     'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 8,  'ntNote': 'A♭4',  'ntCent': '+25c ','ntFreq': '421.34', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA♭'},
-          {'noteNum': 9,  'ntNote': 'G4',   'ntCent': ' +30c','ntFreq': '398.84', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',   'ntCent': '',     'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E♭4',  'ntCent': ' +25c','ntFreq': '315.64', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI♭'},
-          {'noteNum': 12, 'ntNote': 'D4',   'ntCent': '+30c ','ntFreq': '298.79', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',   'ntCent': '',     'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',  'ntCent': '',     'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A♭3',  'ntCent': ' +25c','ntFreq': '210.67', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA♭'},
-          {'noteNum': 16, 'ntNote': 'G3',   'ntCent': '+30c ','ntFreq': '199.42', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',   'ntCent': '',     'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E♭3',  'ntCent': '+25c ','ntFreq': '157.82', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI♭'},
-          {'noteNum': 19, 'ntNote': 'D3',   'ntCent': '+30c ','ntFreq': '149.40', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',   'ntCent': '',     'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',  'ntCent': '',     'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',   'ntCent': '',     'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',     'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA♭ SOL FA MI♭ RE DO SI♭ LA♭ SOL FA MI♭ RE DO SI♭ LA♭ SOL FA MI♭ RE DO SI♭ FA
-        //  21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 11:
-        final List<Map> keyTuning = [     // copy of   case 3:
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',     'ntCent': '',     'ntFreq': '879.98', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',     'ntCent': '',     'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',     'ntCent': '',     'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E5',     'ntCent': '',     'ntFreq': '659.24', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'D5',     'ntCent': '',     'ntFreq': '587.32', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',     'ntCent': '',     'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',    'ntCent': '',     'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 8,  'ntNote': 'A4',     'ntCent': '',     'ntFreq': '439.99', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',     'ntCent': '',     'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',     'ntCent': '',     'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E4',     'ntCent': '',     'ntFreq': '329.62', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'D4',     'ntCent': '',     'ntFreq': '293.66', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',     'ntCent': '',     'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',    'ntCent': '',     'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A3',     'ntCent': '',     'ntFreq': '219.99', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',     'ntCent': '',     'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',     'ntCent': '',     'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E3',     'ntCent': '',     'ntFreq': '164.81', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'D3',     'ntCent': '',     'ntFreq': '146.83', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',     'ntCent': '',     'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',    'ntCent': '',     'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',     'ntCent': '',     'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA SOL FA MI RE DO SI♭ LA SOL FA MI RE DO SI♭ LA SOL FA MI RE DO SI♭ FA
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 12:
-        final List<Map> keyTuning = [     // copy of   case 4:
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',     'ntCent': '',     'ntFreq': '879.98', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',     'ntCent': '',     'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',     'ntCent': '',     'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E5',     'ntCent': '',     'ntFreq': '659.24', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI '},
-          {'noteNum': 5,  'ntNote': 'D5',     'ntCent': '',     'ntFreq': '587.32', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',     'ntCent': '',     'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B4',     'ntCent': '',     'ntFreq': '493.87', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI '},
-          {'noteNum': 8,  'ntNote': 'A4',     'ntCent': '',     'ntFreq': '439.99', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',     'ntCent': '',     'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',     'ntCent': '',     'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E4',     'ntCent': '',     'ntFreq': '329.62', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI '},
-          {'noteNum': 12, 'ntNote': 'D4',     'ntCent': '',     'ntFreq': '293.66', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',     'ntCent': '',     'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B3',     'ntCent': '',     'ntFreq': '246.94', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI '},
-          {'noteNum': 15, 'ntNote': 'A3',     'ntCent': '',     'ntFreq': '219.99', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',     'ntCent': '',     'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',     'ntCent': '',     'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E3',     'ntCent': '',     'ntFreq': '164.81', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI '},
-          {'noteNum': 19, 'ntNote': 'D3',     'ntCent': '',     'ntFreq': '146.83', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',     'ntCent': '',     'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B2',     'ntCent': '',     'ntFreq': '123.47', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI '},
-          {'noteNum': 22, 'ntNote': 'F2',     'ntCent': '',     'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        // LA SOL FA MI RE DO SI LA SOL FA MI RE DO SI LA SOL FA MI RE DO SI FA
-        // 21   B2_123 Note present Only in Lydian (F) Aeol(A) Dor(D)     Scale;    22   F2__92 Note present Only in Aeolian (B) Phryg (F#) Scale
-        //  Hide noteButton B2 (freq 123.47Hz) for 21-string instrument
-        //  In CSV file Editor: hide Label for rowNumber 22 range("A22") for string number 21 for 21-string instrument
-        return keyTuning;
-      case 14:
-        final List<Map> keyTuning = [     // made from   case 15:
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A♭5',    'ntCent': '',     'ntFreq': '830.61', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA♭'},
-          {'noteNum': 2,  'ntNote': 'G5',     'ntCent': '',     'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',     'ntCent': '',     'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E♭5',    'ntCent': '',     'ntFreq': '622.25', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI♭'},
-          {'noteNum': 5,  'ntNote': 'D5',     'ntCent': '',     'ntFreq': '587.32', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',     'ntCent': '',     'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',    'ntCent': '',     'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 8,  'ntNote': 'A♭4',    'ntCent': '',     'ntFreq': '415.30', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA♭'},
-          {'noteNum': 9,  'ntNote': 'G4',     'ntCent': '',     'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',     'ntCent': '',     'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E♭4',    'ntCent': '',     'ntFreq': '311.13', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI♭'},
-          {'noteNum': 12, 'ntNote': 'D4',     'ntCent': '',     'ntFreq': '293.66', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',     'ntCent': '',     'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',    'ntCent': '',     'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A♭3',    'ntCent': '',     'ntFreq': '207.65', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA♭'},
-          {'noteNum': 16, 'ntNote': 'G3',     'ntCent': '',     'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',     'ntCent': '',     'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E♭3',    'ntCent': '',     'ntFreq': '155.56', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI♭'},
-          {'noteNum': 19, 'ntNote': 'D3',     'ntCent': '',     'ntFreq': '146.83', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',     'ntCent': '',     'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',    'ntCent': '',     'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',     'ntCent': '',     'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        //      ['01al830' , '01as830'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el622' , '04es622'] , ['05dl' , '05ds'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al415' , '08as415'] , ['09gl' , '09gs'] , ['10fl' , '10fs'] , ['11el311' , '11es311'] , ['12dl' , '12ds'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al207' , '15as207'] , ['16gl' , '16gs'] , ['17fl' , '17fs'] , ['18el155' , '18es155'] , ['19dl' , '19ds'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-        return keyTuning;
-      case 15:
-        final List<Map> keyTuning = [     // made from   case 3:
-          {'noteNum': 0,  'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-          {'noteNum': 1,  'ntNote': 'A5',     'ntCent': '',     'ntFreq': '879.98', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': ''             , 'ndrm': 'LA '},
-          {'noteNum': 2,  'ntNote': 'G5',     'ntCent': '',     'ntFreq': '783.97', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 3,  'ntNote': 'F5',     'ntCent': '',     'ntFreq': '698.44', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': 'Lenglong'     , 'ndrm': 'FA '},
-          {'noteNum': 4,  'ntNote': 'E♭5',    'ntCent': '',     'ntFreq': '622.25', 'ntMark': 'e', 'ntColor': '', 'step': 'VII ', 'named': ''             , 'ndrm': 'MI♭'},
-          {'noteNum': 5,  'ntNote': 'D5',     'ntCent': '',     'ntFreq': '587.32', 'ntMark': 'd', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 6,  'ntNote': 'C5',     'ntCent': '',     'ntFreq': '523.24', 'ntMark': 'c', 'ntColor': '', 'step': 'V   ', 'named': ''             , 'ndrm': 'DO '},
-          {'noteNum': 7,  'ntNote': 'B♭4',    'ntCent': '',     'ntFreq': '466.15', 'ntMark': 'b', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 8,  'ntNote': 'A4',     'ntCent': '',     'ntFreq': '439.99', 'ntMark': 'a', 'ntColor': '', 'step': 'III ', 'named': 'Kara la dingo', 'ndrm': 'LA '},
-          {'noteNum': 9,  'ntNote': 'G4',     'ntCent': '',     'ntFreq': '391.99', 'ntMark': 'g', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 10, 'ntNote': 'F4',     'ntCent': '',     'ntFreq': '349.22', 'ntMark': 'f', 'ntColor': '', 'step': 'I   ', 'named': ''             , 'ndrm': 'FA '},
-          {'noteNum': 11, 'ntNote': 'E♭4',    'ntCent': '',     'ntFreq': '311.13', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kara la dingo', 'ndrm': 'MI♭'},
-          {'noteNum': 12, 'ntNote': 'D4',     'ntCent': '',     'ntFreq': '293.66', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': ''             , 'ndrm': 'RE '},
-          {'noteNum': 13, 'ntNote': 'C4',     'ntCent': '',     'ntFreq': '261.62', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Jingkandango' , 'ndrm': 'DO '},
-          {'noteNum': 14, 'ntNote': 'B♭3',    'ntCent': '',     'ntFreq': '233.08', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': ''             , 'ndrm': 'SI♭'},
-          {'noteNum': 15, 'ntNote': 'A3',     'ntCent': '',     'ntFreq': '219.99', 'ntMark': 'A', 'ntColor': '', 'step': 'III ', 'named': 'Kumare'       , 'ndrm': 'LA '},
-          {'noteNum': 16, 'ntNote': 'G3',     'ntCent': '',     'ntFreq': '195.99', 'ntMark': 'G', 'ntColor': '', 'step': 'II  ', 'named': ''             , 'ndrm': 'SOL'},
-          {'noteNum': 17, 'ntNote': 'F3',     'ntCent': '',     'ntFreq': '174.61', 'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Timbango'     , 'ndrm': 'FA '},
-          {'noteNum': 18, 'ntNote': 'E♭3',    'ntCent': '',     'ntFreq': '155.56', 'ntMark': 'E', 'ntColor': '', 'step': 'VII ', 'named': 'Kumare'       , 'ndrm': 'MI♭'},
-          {'noteNum': 19, 'ntNote': 'D3',     'ntCent': '',     'ntFreq': '146.83', 'ntMark': 'D', 'ntColor': '', 'step': 'VI  ', 'named': 'Alla la ke'   , 'ndrm': 'RE '},
-          {'noteNum': 20, 'ntNote': 'C3',     'ntCent': '',     'ntFreq': '130.81', 'ntMark': 'C', 'ntColor': '', 'step': 'V   ', 'named': 'Dibong'       , 'ndrm': 'DO '},
-          {'noteNum': 21, 'ntNote': 'B♭2',    'ntCent': '',     'ntFreq': '116.54', 'ntMark': 'B', 'ntColor': '', 'step': 'IV  ', 'named': 'Panchang'     , 'ndrm': 'SI♭'},
-          {'noteNum': 22, 'ntNote': 'F2',     'ntCent': '',     'ntFreq': '87.30',  'ntMark': 'F', 'ntColor': '', 'step': 'I   ', 'named': 'Bakumba'      , 'ndrm': 'FA '},
-          {'noteNum': 23, 'ntNote': '',       'ntCent': '',     'ntFreq': '',       'ntMark': '',  'ntColor': '', 'step': '    ', 'named': ''             , 'ndrm': '   '},
-        ];
-        //      ['01al' , '01as'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el622' , '04es622'] , ['05dl' , '05ds'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al' , '08as'] , ['09gl' , '09gs'] , ['10fl' , '10fs'] , ['11el311' , '11es311'] , ['12dl' , '12ds'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al' , '15as'] , ['16gl' , '16gs'] , ['17fl' , '17fs'] , ['18el155' , '18es155'] , ['19dl' , '19ds'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-        return keyTuning;
-    }//switch
-  }  //end visualMarks
-//
-//toDo: Play Sounds simultaneously via audioplayers
-  // Samples/ sound fonts/ sound bank     koraSound
-  List<List> krSnd = [                              // List krSnd (koraSound 3d-List)
-    [
-      ['01al830' , '01as830'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el622' , '04es622'] , ['05dl554' , '05ds554'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al415' , '08as415'] , ['09gl' , '09gs'] , ['10fl' , '10fs'] , ['11el311' , '11es311'] , ['12dl277' , '12ds277'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al207' , '15as207'] , ['16gl' , '16gs'] , ['17fl' , '17fs'] , ['18el155' , '18es155'] , ['19dl138' , '19ds138'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-    ] , [
-      ['01al882' , '01as882'] , ['02gl777' , '02gs777'] , ['03fl' , '03fs'] , ['04el661' , '04es661'] , ['05dl582' , '05ds582'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al441' , '08as441'] , ['09gl388' , '09gs388'] , ['10fl' , '10fs'] , ['11el330' , '11es330'] , ['12dl291' , '12ds291'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al220' , '15as220'] , ['16gl194' , '16gs194'] , ['17fl' , '17fs'] , ['18el165' , '18es165'] , ['19dl145' , '19ds145'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-    ] , [
-      ['01al' , '01as'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el' , '04es'] , ['05dl' , '05ds'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al' , '08as'] , ['09gl' , '09gs'] , ['10fl' , '10fs'] , ['11el' , '11es'] , ['12dl' , '12ds'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al' , '15as'] , ['16gl' , '16gs'] , ['17fl' , '17fs'] , ['18el' , '18es'] , ['19dl' , '19ds'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-    ] , [
-      ['01al' , '01as'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el' , '04es'] , ['05dl' , '05ds'] , ['06cl' , '06cs'] , ['07bl493' , '07bs493'] , ['08al' , '08as'] , ['09gl' , '09gs'] , ['10fl' , '10fs'] , ['11el' , '11es'] , ['12dl' , '12ds'] , ['13cl' , '13cs'] , ['14bl246' , '14bs246'] , ['15al' , '15as'] , ['16gl' , '16gs'] , ['17fl' , '17fs'] , ['18el' , '18es'] , ['19dl' , '19ds'] , ['20cl' , '20cs'] , ['21bl123' , '21bs123'] , ['22fl' , '22fs']
-    ] , [
-      ['01al' , '01as'] , ['02gl' , '02gs'] , ['03fl739' , '03fs739'] , ['04el' , '04es'] , ['05dl' , '05ds'] , ['06cl554' , '06cs554'] , ['07bl493' , '07bs493'] , ['08al' , '08as'] , ['09gl' , '09gs'] , ['10fl369' , '10fs369'] , ['11el' , '11es'] , ['12dl' , '12ds'] , ['13cl277' , '13cs277'] , ['14bl246' , '14bs246'] , ['15al' , '15as'] , ['16gl' , '16gs'] , ['17fl184' , '17fs184'] , ['18el' , '18es'] , ['19dl' , '19ds'] , ['20cl138' , '20cs138'] , ['21bl123' , '21bs123'] , ['22fl92' , '22fs92']
-    ] , [
-      ['01al' , '01as'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el661' , '04es661'] , ['05dl582' , '05ds582'] , ['06cl' , '06cs'] , ['07bl495' , '07bs495'] , ['08al441' , '08as441'] , ['09gl388' , '09gs388'] , ['10fl' , '10fs'] , ['11el330' , '11es330'] , ['12dl291' , '12ds291'] , ['13cl' , '13cs'] , ['14bl247' , '14bs247'] , ['15al220' , '15as220'] , ['16gl194' , '16gs194'] , ['17fl' , '17fs'] , ['18el165' , '18es165'] , ['19dl145' , '19ds145'] , ['20cl' , '20cs'] , ['21bl123' , '21bs123'] , ['22fl' , '22fs']
-    ] , [
-      ['01al' , '01as'] , ['02gl806' , '02gs806'] , ['03fl' , '03fs'] , ['04el651' , '04es651'] , ['05dl608' , '05ds608'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al' , '08as'] , ['09gl403' , '09gs403'] , ['10fl' , '10fs'] , ['11el325' , '11es325'] , ['12dl304' , '12ds304'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al' , '15as'] , ['16gl201' , '16gs201'] , ['17fl' , '17fs'] , ['18el162' , '18es162'] , ['19dl152' , '19ds152'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-    ] , [
-      ['01al872' , '01as872'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el653' , '04es653'] , ['05dl' , '05ds'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al436' , '08as436'] , ['09gl' , '09gs'] , ['10fl' , '10fs'] , ['11el325' , '11es325'] , ['12dl' , '12ds'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al218' , '15as218'] , ['16gl' , '16gs'] , ['17fl' , '17fs'] , ['18el163' , '18es163'] , ['19dl' , '19ds'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-    ] , [
-      ['01al842' , '01as842'] , ['02gl797' , '02gs797'] , ['03fl' , '03fs'] , ['04el631' , '04es631'] , ['05dl597' , '05ds597'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al421' , '08as421'] , ['09gl398' , '09gs398'] , ['10fl' , '10fs'] , ['11el315' , '11es315'] , ['12dl298' , '12ds298'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al210' , '15as210'] , ['16gl199' , '16gs199'] , ['17fl' , '17fs'] , ['18el157' , '18es157'] , ['19dl149' , '19ds149'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-    ] , [
-      ['01al830' , '01as830'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el622' , '04es622'] , ['05dl' , '05ds'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al415' , '08as415'] , ['09gl' , '09gs'] , ['10fl' , '10fs'] , ['11el311' , '11es311'] , ['12dl' , '12ds'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al207' , '15as207'] , ['16gl' , '16gs'] , ['17fl' , '17fs'] , ['18el155' , '18es155'] , ['19dl' , '19ds'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-    ] , [
-      ['01al' , '01as'] , ['02gl' , '02gs'] , ['03fl' , '03fs'] , ['04el622' , '04es622'] , ['05dl' , '05ds'] , ['06cl' , '06cs'] , ['07bl' , '07bs'] , ['08al' , '08as'] , ['09gl' , '09gs'] , ['10fl' , '10fs'] , ['11el311' , '11es311'] , ['12dl' , '12ds'] , ['13cl' , '13cs'] , ['14bl' , '14bs'] , ['15al' , '15as'] , ['16gl' , '16gs'] , ['17fl' , '17fs'] , ['18el155' , '18es155'] , ['19dl' , '19ds'] , ['20cl' , '20cs'] , ['21bl' , '21bs'] , ['22fl' , '22fs']
-    ]
-  ]; // end krSnd (end koraSound 3d-List)
 //
   void playSound(int tuning, int number, int shortOrLong, double nVol, int ext) async {
     final player = AudioPlayer(); // only one final audioPlayer
@@ -2532,250 +1789,379 @@ if (Platform.isWindows) {
 //
     ntTblNtfrsList[25]['onTapCollisionPrevention_1'] = 0; ntTblNotifier.value = ntTblNtfrsList;
   } // end changeTableView()
+//
+//
+//
+///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
+  void _setupPlayerIsolate(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
+/////// SEND INITIAL DATA, add New Data Here:
+    List<List<dynamic>> allData = [[ntTblNtfrsList], [iStarts], [iEnds], jBtnRelease, csvLst, [notesByBit], [rngExtend], [toggleIcnMsrBtn],
+      [fromTheBegin], [shortOrLongNum], [selectedtuningNum], [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]];
+///////
+// developer.log(allData.toString());
+// List<List<dynamic>> allData = [[notesByBit], [rngExtend]];
+    _receivePortFromPlayer = ReceivePort();
+    _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, _receivePortFromPlayer!.sendPort);
+    void _sendDataToPlayer(allData) {
+      if (_sendPortToPlayer != null) {
+        _sendPortToPlayer!.send(allData);
+        // developer.log("test_1: Data sent to player isolate.");
+      } else {
+        // developer.log("Error: _sendPortToPlayer is null.");
+      }
+    }
+    _receivePortFromPlayer!.listen((message) {
+   // if (message is SendPort) {_sendPortToPlayer = message;_sendDataToPlayer(allData);developer.log("main_isolate: Port received. Ready to send data.");}
+      if (message is SendPort) {_sendPortToPlayer = message;_sendDataToPlayer(allData);}
+   //
+      if (message is String) {
+        final parts = message.split(':');
+        final key = parts[0];
+        final value = parts.length > 1 ? parts[1] : null;
+        switch (key) {
+          case 'oneTraversingInstanceLaunched': oneTraversingInstanceLaunched = (value == 'true'); break;
+          case 'showArrowMoveToTheLeft': showArrowMoveToTheLeft = (value == 'true'); break;
+          case 'showVerticalBigLables': showVerticalBigLables = (value == 'true'); break;
+          case 'toggleIcnMsrBtn': toggleIcnMsrBtn = (value == 'true'); break;
+          case 'fromTheBegin': fromTheBegin = (value == 'true'); break;
+          case 'onTapCollisionPrevention_1': ntTblNtfrsList[25]['onTapCollisionPrevention_1'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'msrTgl': ntTblNtfrsList[5]['msrTgl'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'tableChangeCount128': ntTblNtfrsList[8]['tableChangeCount128'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'tableChangeCount64': ntTblNtfrsList[7]['tableChangeCount64'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'tableChangeCount32': ntTblNtfrsList[6]['tableChangeCount32'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'tableChangeCount': ntTblNtfrsList[4]['tableChangeCount'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'rangeStart': ntTblNtfrsList[0]['rangeStart'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'rangeEnd': ntTblNtfrsList[1]['rangeEnd'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'isSwitched_32_64_128': isSwitched_32_64_128 = int.tryParse(value ?? '32') ?? 32; break;
+          case 'playingBit': playingBit = int.tryParse(value ?? '0') ?? 0; break;
+          case 'startBit': ntTblNtfrsList[2]['startBit'] = int.tryParse(value ?? '0') ?? 0; break;
+          case 'mode_3264_or_64128': mode_3264_or_64128 = int.tryParse(value ?? '0') ?? 0; break;
+          case 'SETBUTTONSNOTIFIERREQUEST': buttonsNotifier.value = []; break;
+          case 'GETNOTIFIERREQUEST': _sendDataToPlayer(allData); break;
+          case 'SETNOTIFIERREQUEST': ntTblNotifier.value = ntTblNtfrsList; break;
+          case 'setDataSharedPref': setDataSharedPref(); break;
+          case 'checkIfTCCareOutOfLimits': checkIfTCCareOutOfLimits(); break;
+          case 'SETSTATE': setState(() {}); break;
+        } // end switch
+      } // end if
+      //
+      // if (message is String && message == "SETSTATE")                     {setState(() {});}
+      // if (message is String && message == "SETBUTTONSNOTIFIERREQUEST")    {setState(() {});}
+      // if (message is String && message == "onTapCollisionPrevention_1:1") {setState(() {});}
+      // if (message is String && message == "SETNOTIFIERREQUEST")           {setState(() {});}
+      // if (message is String && message == "GETNOTIFIERREQUEST")           {setState(() {});}
+      // if (message is String && message == "tableChangeCount128") {setState(() {});}
+      // if (message is String && message == "tableChangeCount64") {setState(() {});}
+      // if (message is String && message == "tableChangeCount32") {setState(() {});}
+      // if (message is String && message == "playingBit") {setState(() {});}
+      // if (message is String && message == "startBit") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // if (message is String && message == "SETSTATE") {setState(() {});}
+      // SETSTATE
+      // SETBUTTONSNOTIFIERREQUEST
+      // onTapCollisionPrevention_1:1
+      // SETNOTIFIERREQUEST
+      // GETNOTIFIERREQUEST
+      // tableChangeCount128:
+      // tableChangeCount64:
+      // tableChangeCount32:
+      // playingBit:
+      // startBit:
+      // tableChangeCount:
+      // rangeStart:
+      // rangeEnd:
+      // if (message is String && message == "oneTraversingInstanceLaunched") {oneTraversingInstanceLaunched = true; setState(() {});}
+      // if (message is String && message == "showArrowMoveToTheLeft") {showArrowMoveToTheLeft = false;  setState(() {});}
+      // if (message is String && message == "showVerticalBigLables")  {showVerticalBigLables = false; setState(() {});}
+      // msrTgl:1
+      // toggleIcnMsrBtn:false
+      // fromTheBegin:false
+      // isSwitched_32_64_128:
+      // mode_3264_or_64128:
+      // setDataSharedPref
+      // checkIfTCCareOutOfLimits
+      //
+      if (message is int) {}
+    });
+  }
+  void _stopPlayer() {
+    _sendPortToPlayer?.send('STOP');
+    _playerIsolate?.kill(priority: Isolate.immediate);
+    _playerIsolate = null;
+    _receivePortFromPlayer?.close();
+  }
+  void _play() {                        // Start playback
+    if (_sendPortToPlayer != null) {
+      _sendPortToPlayer!.send('START'); // Send the command to start
+    }
+  }
+//
+//
   Future listTraversal (int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
-//**********************************************************************//
-    var PBIT   = ntTblNtfrsList[3]['playingBit']!;
-    var TCC    = ntTblNtfrsList[4]['tableChangeCount']!;
-    var OisLEFT =  ntTblNtfrsList[0]['rangeStart']?.round().remainder(ntTblNtfrsList[21]['nTcolS']!*2);  // Range slider left Handle at the Left position
-    var OisRIGHT = ntTblNtfrsList[1]['rangeEnd']?.round().remainder(ntTblNtfrsList[21]['nTcolS']!*4);    // Range slider right Handle at the Right position
-    var rSTART = ntTblNtfrsList[0]['rangeStart']!;
-    var rEND = ntTblNtfrsList[1]['rangeEnd']!;
-//**********************************************************************//
-    oneTraversingInstanceLaunched = true; setState(() {}); // prevention of double- or multi- starts
-    showArrowMoveToTheLeft=false;                     // hide Arrow "Move Left"
-    showVerticalBigLables = false; setState(() {});   // hide
-    bool showLocalFinger = false;
-    int iEndsTmp;                                             // for dynamical shortening or extending range by slider
-    bool shouldChangeView = true;                             // to not increase TCC when stopped by user
-    if(TCC == 1) {iEndsTmp = ((rEND)/2).round() + 0;} else {iEndsTmp = ((rEND)/2).round() + 0 + (TCC - 1) * (ntTblNtfrsList[21]['nTcolS']!*2);}
-//////////////////////////// Playback speed Slowdown correction using Stopwatch (part 1 of 3): /////////////////
-// Android: first ~3 measures after first file load - playback accelerates, then slows down,
-// Windows: in background - playback accelerates (when result of widget rebuild is not visible)
-// Conclusion: needs speed correction, SLOWDOWN (!), so used stopwatch steps 1-3:
-    Stopwatch stopwatch;  // measure execution duration in between lines of code 1 of 2
-// print('Elapse Start: ${stopwatch.elapsed}'); // works fine
-////////////////////////////////////////////////// End Stopwatch 1 of 2 ////////////////////////////////////////
-    bool dontChangeView = true;     // don't change Current Page View with Current Numbers of Measures
-    ntTblNtfrsList = [...ntTblNotifier.value];
-///////////////////////////////////     // toDo: issue: measure toggle
-// range Extends: if range was already set and now it extends by user using range slider
-    if (rngExtend == true) {
-      PBIT = iStarts;
-      ntTblNtfrsList[5]['msrTgl'] = 1;
-      ntTblNotifier.value = ntTblNtfrsList;
-      ntTblNtfrsList[3]['playingBit'] = PBIT;
-      ntTblNtfrsList = [...ntTblNotifier.value];
-      setState(() {toggleIcnMsrBtn = false;});
-    } else {}
-///////////////////////////////////
-    if (iEnds > csvLst.length) {iEnds = csvLst.length - 0;} else {} // end if toDo: (prevention of grey screen) when List Naturally Ended
-//print(iEnds);print(wasTSVextDetected);
-//--------------------------------------- Main Cycle Loops Begin ---------------------------------------//
-    outerloop:                // NOT Used    try to break for-loop by label and keyword "break outerloop;"   No very good idea!
-    for (int i = iStarts; i < iEnds; i++) { // traversing a list from start to finish //"mS" could be changed at any time by Slider
-      //
-      var sw = Stopwatch()..start();
-      while((ntTblNtfrsList[25]['onTapCollisionPrevention_1'] == 1 || ntTblNtfrsList[26]['onTapCollisionPrevention_2'] == 1 || ntTblNtfrsList[27]['onTapCollisionPrevention_3'] == 1)  && sw.elapsedMilliseconds < 625)
-      {
-        // NO ENDLESS LOOP !!!  2 SECONDS
-      }
-      //
-      ntTblNtfrsList = [...ntTblNotifier.value];
-      TCC    = ntTblNtfrsList[4]['tableChangeCount']!;    // try to fix incorrect view change after bothTables onTap
-      if(TCC == 1) {iEndsTmp = ((ntTblNtfrsList[1]['rangeEnd']!)/2).round() + 0;} else {iEndsTmp = ((ntTblNtfrsList[1]['rangeEnd']!)/2).round() + 0 + (TCC - 1) * (ntTblNtfrsList[21]['nTcolS']!*2);}  // use listenable value ntTblNtfrsList[1]['rangeEnd']!
-      if((i==iEnds-1) && OisLEFT == 0 && OisRIGHT == 0 && rSTART==0 && TCC > 1) {showArrowMoveToTheLeft=true;setState(() {});} else {};      // show suggest to move to the left handle of the range slider to start from the beginning // fix rSTART==0  arrow Move Left appears at the middle Left Handle position
-////////// Stopwatch (part 2 of 3)///////////
-      stopwatch = Stopwatch()..start();
-      stopwatch.reset();
-      //print('Elapse Start: ${stopwatch.elapsed}');
-/////////// End Stopwatch (part 2 of 3)//////
-//
-      /////////////// Animation of Cursor Move
-      PBIT       = i;  // animation of cursor move
-      ntTblNtfrsList[3]['playingBit'] = PBIT;
-      ntTblNotifier.value = ntTblNtfrsList;        // instead of previous value attach
-      /////////////// End Animation of Cursor Move
+    _setupPlayerIsolate(iStarts, iEnds, jBtnRelease, csvLst, notesByBit, rngExtend);  // see SEND INITIAL DATA
+  } //end listTraversal
 //
 //
-      // if range slider became All the way to the left and All the way to the right, then:
-      if (OisLEFT == 0 && OisRIGHT == 0 && fromTheBegin == true) { // restore cursor position when range released by user
-        setState(() {fromTheBegin = false;}); // will not start from the begin of the List   toDo: !!! setState Remove It !!!
-      } else {} // end if
-//
-//////////////////////////////////////////////////////////////////// // range WAS all the way to the left and right (not set), and NOW it changed by user, then Stop:
-      if((OisLEFT==0 && ntTblNtfrsList[0]['rangeStart']?.round().remainder(ntTblNtfrsList[21]['nTcolS']!*2) != 0) || (OisRIGHT==0 && ntTblNtfrsList[1]['rangeEnd']?.round().remainder(ntTblNtfrsList[21]['nTcolS']!*4) != 0)) {
-        setState(() {toggleIcnMsrBtn = true;});
-        ntTblNtfrsList = [...ntTblNotifier.value];
-        ntTblNtfrsList[5]['msrTgl'] = 0;
-        ntTblNotifier.value = ntTblNtfrsList;
-        setState(() {
-          ntTblNtfrsList = [...ntTblNotifier.value];
-          isSwitched_32_64_128 = ntTblNtfrsList[15]['listener_32_64_128']!;
-          mode_3264_or_64128 = ntTblNtfrsList[16]['listener_3264_64128']!;
-        });
-      }
-      else {}
-////////////////////////////////////////////////////////////////////
+/////// end NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3
 //
 //
-/////////////////////////////////////////////////////////////////////////////////////////
-      if (toggleIcnMsrBtn) {  // if measure button pressed by user
-        shouldChangeView = false;
-        if (fromTheBegin) {
-          i = iEnds - 1; // exit from cycle = release, stop
-          //break outerloop;  // was: i = iEnds - 1;    // try to break outerloop by label
-          ntTblNtfrsList[2]['startBit']         = 0;
-          ntTblNtfrsList[3]['playingBit']       = 0;
-          ntTblNtfrsList[4]['tableChangeCount'] = 1;
-          ntTblNtfrsList[5]['msrTgl'] = 0;
-          ntTblNtfrsList[6]['tableChangeCount32']  = 1;
-          ntTblNtfrsList[7]['tableChangeCount64']  = 1;
-          ntTblNtfrsList[8]['tableChangeCount128'] = 1;
-          ntTblNotifier.value = ntTblNtfrsList;
-          setState(() {toggleIcnMsrBtn = true;oneTraversingInstanceLaunched = false;});
-        } else {
-          i = iEnds - 1; // exit from cycle = release, stop
-          //break outerloop;  // was: i = iEnds - 1;    // try to break outerloop by label
-          //                                            // So that there is no empty space at the cursor position after stopping:
-          ntTblNtfrsList[3]['playingBit']       = maxLength;
-          ntTblNotifier.value = ntTblNtfrsList;
-          //
-          setState(() {toggleIcnMsrBtn = true;oneTraversingInstanceLaunched = false;});
-        } // end if (start from the begin)
-        setState(() {
-          ntTblNtfrsList = [...ntTblNotifier.value];
-          isSwitched_32_64_128 = ntTblNtfrsList[15]['listener_32_64_128']!;
-          mode_3264_or_64128 = ntTblNtfrsList[16]['listener_3264_64128']!;
-        });
-      } else {} // end exiting cycle (stop play), measure button pressed by user
-/////////////////////////////////////////////////////////////////////////////////////////
-      ///////////////////////////////////////////////////////////////////////////////
-      // if range dynamically changed by user (rangeEnd became less than playingBit):
-      if ((iEndsTmp <= PBIT && (OisLEFT != 0 || OisRIGHT != 0))) {  // if range dynamically changed by user
-        i = iEnds - 1; // exit from cycle = release, stop
-        // break outerloop;  // was: i = iEnds - 1;    // try to break outerloop by label
-        setState(() {i = iEnds - 1;});
-      } else {} // end if
-      //////////////////////////////////////////////////////////////////////////////
-//////////////////////////// Current Bit Traversal by "j", PlayingNotes ////////////////////////////////
-      for (int j = 1; j <= notesByBit; j++) {     // (j) is number of playing string at the moment, and  shortOrLong - is variant of note's length // <=   <=   <=  less or equal
-        if (csvLst[i][j] != "") {                 // for simple Lists Use "add" method!!          // shortOrLongNum = 1 or 2 (Long|Short)  // You not to have to escape "asterisk", or "\" an "raw"
-          if (csvLst[i][j].toString().contains("*")) {shortOrLongNum = 2; jBtnRelease.add(j);} else {} // note with (*) is a Short Note, sounds faster //LONG NOTES NOT WORKED BY THE REASON OF LIST.FROM data1, inherit changed it's parent!!! You not to have to escape symbol '\' or use a raw string
-          if(ntTblNtfrsList[5]['msrTgl'] == 0) {noteVolumeBack = noteVolume; noteVolume = 0.0;} else {}           // to (iEnds - 1) note will not hear    1 of 2
-          playSound(selectedtuningNum, j, shortOrLongNum, noteVolume, extension);  // sounds from here !
-          if(ntTblNtfrsList[5]['msrTgl'] == 0) {noteVolume = noteVolumeBack;} else {}   //restoring normal Vol    // to (iEnds - 1) note will not hear    2 of 2
-          shortOrLongNum = 1; // resetting to Long ones !!!
-          if((csvLst[i][j].toString().contains("i") && showFingeringOnButtons[j] == 0) || (csvLst[i][j].toString().contains("t") && showFingeringOnButtons[j] == 1)) {
-            showLocalFinger=true;    // if notation contains "index finger" and by default rule this string played not by Index
-          } else {
-            showLocalFinger=false;   // if notation contains "thumb finger" and by default rule this string played not by Thumb
-          } // end if, for show Locally Fingering   // As planned, local finger is shown ONLY if the default fingering rule is not followed
-          addButtonsStates(j, showLocalFinger);        // pressing the button
-        }  // will be hear async parallel simultaneously sounds notes by one bit and aftertones of previous bits notes
-      } // ind for (j)
-//////////////////////////// End Current Bit Traversal by "j", PlayingNotes ////////////////////////////
-      var sw1 = Stopwatch()..start();
-      while((ntTblNtfrsList[25]['onTapCollisionPrevention_1'] == 1 || ntTblNtfrsList[26]['onTapCollisionPrevention_2'] == 1 || ntTblNtfrsList[27]['onTapCollisionPrevention_3'] == 1)  && sw1.elapsedMilliseconds < 625)
-      {
-        // NO ENDLESS LOOP !!!  2 SECONDS
-      }
-      ntTblNtfrsList = [...ntTblNotifier.value];
-        if(ntTblNtfrsList[25]['onTapCollisionPrevention_1'] == 0 && ntTblNtfrsList[26]['onTapCollisionPrevention_2'] == 0 && ntTblNtfrsList[27]['onTapCollisionPrevention_3'] == 0) {
-          if (shouldChangeView == true) {
-            await changeTableView(i, iStarts, dontChangeView);  // await added!
-          } else {} // instead of 256 "ntTblNtfrsList[21]['nTcolS']!" replace to  "ntTblNtfrsList[21]['ntTblNtfrsList[21]['nTcolS']!']" . It seems impossible!
-        } else {} //  end onTap collision prevention
-      //
-      //
-      if(OisLEFT == 0 && OisRIGHT == 0 && rSTART?.round() != 2*ntTblNtfrsList[21]['nTcolS']!) {
-        iEnds = maxLength;
-        // if TSV, prevention of iEnds range error at the end of playback (2 of 2):
-        if(wasTSVextDetected==true || googleCSVdetected==true) { // ??? TSV needs minus one element at the end (this is the difference from CSV):
-          iEnds = csvLst.length - 0;
-        } else {
-        } //end if TSV was detected
-      } else {}; //end if
-      if((i+1).remainder(ntTblNtfrsList[21]['nTcolS']!*2) == 0) {dontChangeView = false;} else {} //end if // don't change table view after manually toggle button play
-      /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////------End Change table View------////////////////////////
-//
-//////////////////////// imitation of cancelable Delay: ///////////////// Eeach time calling function, because "crntSldrValT" may changed any time by user
-      if(tempoCoeff<=1.8) { // Do cancelable delay:
-        // toDo: first pause of 3 (silence) before short-sounding notes buttons release:
-        for (int u = 0; u < 3; u++) {await Future.delayed(reCalculateMD());if(cnslDelay1Ntfr.value==true){u=3; cnslDelay1Ntfr.value=false;}} // end for
-        if (jBtnRelease.isNotEmpty) {                                                                 // toDo: setState() N2
-          for (int k in jBtnRelease){   // for simple Lists Use simple construction "in"
-            releaseButtonsStates(k);    // release shortly sounded notes buttons
-          } // end for (k)
-        } else {} // end if (jBtnRelease.length)
-        jBtnRelease.clear();  // the best way to clear List
-        // toDo: second pause of 3 (silence) before normal long-sounding notes buttons release:
-        for (int u = 0; u < 7; u++) {await Future.delayed(reCalculateMD());if(cnslDelay1Ntfr.value==true){u=7; cnslDelay1Ntfr.value=false;}} // end for
-        releaseButtonsStates(0);         // release All notes buttons                                // toDo: setState() N3
-        // toDo: third pause of 3 (silence) before starting next bit:
-        for (int u = 0; u < 5; u++) {await Future.delayed(reCalculateMD());if(cnslDelay1Ntfr.value==true){u=5; cnslDelay1Ntfr.value=false;}} // end for
-      } else {      // too high table visualisation speed, NO cancelable delay:
-        // toDo: first pause of 3 (silence) before short-sounding notes buttons release:
-        await Future.delayed(reCalculateMD2());
-        if (jBtnRelease.isNotEmpty) {                                                                 // toDo: setState() N2
-          for (int k in jBtnRelease){   // for simple Lists Use simple construction "in"
-            releaseButtonsStates(k);    // release shortly sounded notes buttons
-          } // end for (k)
-        } else {} // end if (jBtnRelease.length)
-        jBtnRelease.clear();  // the best way to clear List
-        // toDo: second pause of 3 (silence) before normal long-sounding notes buttons release:
-        await Future.delayed(reCalculateMD2());
-        releaseButtonsStates(0);         // release All notes buttons                                // toDo: setState() N3
-        // toDo: third pause of 3 (silence) before starting next bit:
-        await Future.delayed(reCalculateMD2());
-      } //end if additional tempo coeff > 1
-////////////////////// End imitation of cancelable Delay//////////////////                            // toDo: setState() N4
-//
-////////////////////// Completion naturally //////////////////////
-      if (i == iEnds - 1) {      // completion naturally upon reaching iEnds OR at the end of the List
-        shouldChangeView = false;
-        // print('ends naturally');
-        ntTblNtfrsList = [...ntTblNotifier.value];
-        if(fromTheBegin) {
-          ntTblNtfrsList[2]['startBit']         = 0;
-          ntTblNtfrsList[3]['playingBit']       = 0;
-          ntTblNtfrsList[4]['tableChangeCount'] = 1;
-          ntTblNtfrsList[5]['msrTgl'] = 0;
-          ntTblNtfrsList[6]['tableChangeCount32']  = 1;
-          ntTblNtfrsList[7]['tableChangeCount64']  = 1;
-          ntTblNtfrsList[8]['tableChangeCount128'] = 1;
-          setState(() {toggleIcnMsrBtn = true;oneTraversingInstanceLaunched = false;});
-        } else {                          // completion naturally at the end of the selected Range
-          ntTblNtfrsList[5]['msrTgl'] = 0;
-          //                           // So that there is no empty space at the cursor position after stopping:
-          ntTblNtfrsList[3]['playingBit']       = maxLength;
-          ntTblNotifier.value = ntTblNtfrsList;
-          //
-          setState(() {toggleIcnMsrBtn = true;oneTraversingInstanceLaunched = false;});
-        } //end if(start from the begin)
-        ntTblNotifier.value = ntTblNtfrsList;
-        setState(() {
-          ntTblNtfrsList = [...ntTblNotifier.value];
-          isSwitched_32_64_128 = ntTblNtfrsList[15]['listener_32_64_128']!;
-          mode_3264_or_64128 = ntTblNtfrsList[16]['listener_3264_64128']!;
-        });
-      } // end if(): setting Icon on Measure Button to "Play" (default)
-/////////////////// End Completion naturally /////////////////////
-//
-//
-//// Extra Delay (especially relevant: to Android - ONLY at App launch and first file load - it is accelerating, so, it needs to some slowDown):
-//// toDo: There was a very significant smoothness, it's very good:
-      if(stopwatch.elapsedMilliseconds < 100) {   // < 100 mS clean code execution time
-        for (int u = 0; u < 6; u++) {await Future.delayed(reCalculateMD());} // end for(u)
-      } else {} //end if
-//
-//
-///////////////////////////////////////////// End Stopwatch 3 of 3 ////////////////////////////////////////////////
-      await setDataSharedPref();   // CALL
-    } // end for (i)                                        // "oneTraversingInstanceLaunched" is a Double-start prevention
-    await checkIfTCCareOutOfLimits();  // if previous session ends incorrectly or table change view ends incorrectly
-    oneTraversingInstanceLaunched = false; setState(() {}); // after additional list traversal it could be "true", so setting it to "false" at the end
-  } // end listTraversal()
+                                    Future listTraversal_orig (int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
+                                  //**********************************************************************//
+                                      var PBIT   = ntTblNtfrsList[3]['playingBit']!;
+                                      var TCC    = ntTblNtfrsList[4]['tableChangeCount']!;
+                                      var OisLEFT =  ntTblNtfrsList[0]['rangeStart']?.round().remainder(ntTblNtfrsList[21]['nTcolS']!*2);  // Range slider left Handle at the Left position
+                                      var OisRIGHT = ntTblNtfrsList[1]['rangeEnd']?.round().remainder(ntTblNtfrsList[21]['nTcolS']!*4);    // Range slider right Handle at the Right position
+                                      var rSTART = ntTblNtfrsList[0]['rangeStart']!;
+                                      var rEND = ntTblNtfrsList[1]['rangeEnd']!;
+                                  //**********************************************************************//
+                                      oneTraversingInstanceLaunched = true; setState(() {}); // prevention of double- or multi- starts
+                                      showArrowMoveToTheLeft=false;                     // hide Arrow "Move Left"
+                                      showVerticalBigLables = false; setState(() {});   // hide
+                                      bool showLocalFinger = false;
+                                      int iEndsTmp;                                             // for dynamical shortening or extending range by slider
+                                      bool shouldChangeView = true;                             // to not increase TCC when stopped by user
+                                      if(TCC == 1) {iEndsTmp = ((rEND)/2).round() + 0;} else {iEndsTmp = ((rEND)/2).round() + 0 + (TCC - 1) * (ntTblNtfrsList[21]['nTcolS']!*2);}
+                                  //////////////////////////// Playback speed Slowdown correction using Stopwatch (part 1 of 3): /////////////////
+                                  // Android: first ~3 measures after first file load - playback accelerates, then slows down,
+                                  // Windows: in background - playback accelerates (when result of widget rebuild is not visible)
+                                  // Conclusion: needs speed correction, SLOWDOWN (!), so used stopwatch steps 1-3:
+                                      Stopwatch stopwatch;  // measure execution duration in between lines of code 1 of 2
+                                  // print('Elapse Start: ${stopwatch.elapsed}'); // works fine
+                                  ////////////////////////////////////////////////// End Stopwatch 1 of 2 ////////////////////////////////////////
+                                      bool dontChangeView = true;     // don't change Current Page View with Current Numbers of Measures
+                                      ntTblNtfrsList = [...ntTblNotifier.value];
+                                  ///////////////////////////////////     // toDo: issue: measure toggle
+                                  // range Extends: if range was already set and now it extends by user using range slider
+                                      if (rngExtend == true) {
+                                        PBIT = iStarts;
+                                        ntTblNtfrsList[5]['msrTgl'] = 1;
+                                        ntTblNotifier.value = ntTblNtfrsList;
+                                        ntTblNtfrsList[3]['playingBit'] = PBIT;
+                                        ntTblNtfrsList = [...ntTblNotifier.value];
+                                        setState(() {toggleIcnMsrBtn = false;});
+                                      } else {}
+                                  ///////////////////////////////////
+                                      if (iEnds > csvLst.length) {iEnds = csvLst.length - 0;} else {} // end if toDo: (prevention of grey screen) when List Naturally Ended
+                                  //print(iEnds);print(wasTSVextDetected);
+                                  //--------------------------------------- Main Cycle Loops Begin ---------------------------------------//
+                                      outerloop:                // NOT Used    try to break for-loop by label and keyword "break outerloop;"   No very good idea!
+                                      for (int i = iStarts; i < iEnds; i++) { // traversing a list from start to finish //"mS" could be changed at any time by Slider
+                                        //
+                                        var sw = Stopwatch()..start();
+                                        while((ntTblNtfrsList[25]['onTapCollisionPrevention_1'] == 1 || ntTblNtfrsList[26]['onTapCollisionPrevention_2'] == 1 || ntTblNtfrsList[27]['onTapCollisionPrevention_3'] == 1)  && sw.elapsedMilliseconds < 625)
+                                        {
+                                          // NO ENDLESS LOOP !!!  2 SECONDS
+                                        }
+                                        //
+                                        ntTblNtfrsList = [...ntTblNotifier.value];
+                                        TCC    = ntTblNtfrsList[4]['tableChangeCount']!;    // try to fix incorrect view change after bothTables onTap
+                                        if(TCC == 1) {iEndsTmp = ((ntTblNtfrsList[1]['rangeEnd']!)/2).round() + 0;} else {iEndsTmp = ((ntTblNtfrsList[1]['rangeEnd']!)/2).round() + 0 + (TCC - 1) * (ntTblNtfrsList[21]['nTcolS']!*2);}  // use listenable value ntTblNtfrsList[1]['rangeEnd']!
+                                        if((i==iEnds-1) && OisLEFT == 0 && OisRIGHT == 0 && rSTART==0 && TCC > 1) {showArrowMoveToTheLeft=true;setState(() {});} else {};      // show suggest to move to the left handle of the range slider to start from the beginning // fix rSTART==0  arrow Move Left appears at the middle Left Handle position
+                                  ////////// Stopwatch (part 2 of 3)///////////
+                                        stopwatch = Stopwatch()..start();
+                                        stopwatch.reset();
+                                        //print('Elapse Start: ${stopwatch.elapsed}');
+                                  /////////// End Stopwatch (part 2 of 3)//////
+                                  //
+                                        /////////////// Animation of Cursor Move
+                                        PBIT       = i;  // animation of cursor move
+                                        ntTblNtfrsList[3]['playingBit'] = PBIT;
+                                        ntTblNotifier.value = ntTblNtfrsList;        // instead of previous value attach
+                                        /////////////// End Animation of Cursor Move
+                                  //
+                                  //
+                                        // if range slider became All the way to the left and All the way to the right, then:
+                                        if (OisLEFT == 0 && OisRIGHT == 0 && fromTheBegin == true) { // restore cursor position when range released by user
+                                          setState(() {fromTheBegin = false;}); // will not start from the begin of the List   toDo: !!! setState Remove It !!!
+                                        } else {} // end if
+                                  //
+                                  //////////////////////////////////////////////////////////////////// // range WAS all the way to the left and right (not set), and NOW it changed by user, then Stop:
+                                        if((OisLEFT==0 && ntTblNtfrsList[0]['rangeStart']?.round().remainder(ntTblNtfrsList[21]['nTcolS']!*2) != 0) || (OisRIGHT==0 && ntTblNtfrsList[1]['rangeEnd']?.round().remainder(ntTblNtfrsList[21]['nTcolS']!*4) != 0)) {
+                                          setState(() {toggleIcnMsrBtn = true;});
+                                          ntTblNtfrsList = [...ntTblNotifier.value];
+                                          ntTblNtfrsList[5]['msrTgl'] = 0;
+                                          ntTblNotifier.value = ntTblNtfrsList;
+                                          setState(() {
+                                            ntTblNtfrsList = [...ntTblNotifier.value];
+                                            isSwitched_32_64_128 = ntTblNtfrsList[15]['listener_32_64_128']!;
+                                            mode_3264_or_64128 = ntTblNtfrsList[16]['listener_3264_64128']!;
+                                          });
+                                        }
+                                        else {}
+                                  ////////////////////////////////////////////////////////////////////
+                                  //
+                                  //
+                                  /////////////////////////////////////////////////////////////////////////////////////////
+                                        if (toggleIcnMsrBtn) {  // if measure button pressed by user
+                                          shouldChangeView = false;
+                                          if (fromTheBegin) {
+                                            i = iEnds - 1; // exit from cycle = release, stop
+                                            //break outerloop;  // was: i = iEnds - 1;    // try to break outerloop by label
+                                            ntTblNtfrsList[2]['startBit']         = 0;
+                                            ntTblNtfrsList[3]['playingBit']       = 0;
+                                            ntTblNtfrsList[4]['tableChangeCount'] = 1;
+                                            ntTblNtfrsList[5]['msrTgl'] = 0;
+                                            ntTblNtfrsList[6]['tableChangeCount32']  = 1;
+                                            ntTblNtfrsList[7]['tableChangeCount64']  = 1;
+                                            ntTblNtfrsList[8]['tableChangeCount128'] = 1;
+                                            ntTblNotifier.value = ntTblNtfrsList;
+                                            setState(() {toggleIcnMsrBtn = true;oneTraversingInstanceLaunched = false;});
+                                          } else {
+                                            i = iEnds - 1; // exit from cycle = release, stop
+                                            //break outerloop;  // was: i = iEnds - 1;    // try to break outerloop by label
+                                            //                                            // So that there is no empty space at the cursor position after stopping:
+                                            ntTblNtfrsList[3]['playingBit']       = maxLength;
+                                            ntTblNotifier.value = ntTblNtfrsList;
+                                            //
+                                            setState(() {toggleIcnMsrBtn = true;oneTraversingInstanceLaunched = false;});
+                                          } // end if (start from the begin)
+                                          setState(() {
+                                            ntTblNtfrsList = [...ntTblNotifier.value];
+                                            isSwitched_32_64_128 = ntTblNtfrsList[15]['listener_32_64_128']!;
+                                            mode_3264_or_64128 = ntTblNtfrsList[16]['listener_3264_64128']!;
+                                          });
+                                        } else {} // end exiting cycle (stop play), measure button pressed by user
+                                  /////////////////////////////////////////////////////////////////////////////////////////
+                                        ///////////////////////////////////////////////////////////////////////////////
+                                        // if range dynamically changed by user (rangeEnd became less than playingBit):
+                                        if ((iEndsTmp <= PBIT && (OisLEFT != 0 || OisRIGHT != 0))) {  // if range dynamically changed by user
+                                          i = iEnds - 1; // exit from cycle = release, stop
+                                          // break outerloop;  // was: i = iEnds - 1;    // try to break outerloop by label
+                                          setState(() {i = iEnds - 1;});
+                                        } else {} // end if
+                                        //////////////////////////////////////////////////////////////////////////////
+                                  //////////////////////////// Current Bit Traversal by "j", PlayingNotes ////////////////////////////////
+                                        for (int j = 1; j <= notesByBit; j++) {     // (j) is number of playing string at the moment, and  shortOrLong - is variant of note's length // <=   <=   <=  less or equal
+                                          if (csvLst[i][j] != "") {                 // for simple Lists Use "add" method!!          // shortOrLongNum = 1 or 2 (Long|Short)  // You not to have to escape "asterisk", or "\" an "raw"
+                                            if (csvLst[i][j].toString().contains("*")) {shortOrLongNum = 2; jBtnRelease.add(j);} else {} // note with (*) is a Short Note, sounds faster //LONG NOTES NOT WORKED BY THE REASON OF LIST.FROM data1, inherit changed it's parent!!! You not to have to escape symbol '\' or use a raw string
+                                            if(ntTblNtfrsList[5]['msrTgl'] == 0) {noteVolumeBack = noteVolume; noteVolume = 0.0;} else {}           // to (iEnds - 1) note will not hear    1 of 2
+                                            playSound(selectedtuningNum, j, shortOrLongNum, noteVolume, extension);  // sounds from here !
+                                            if(ntTblNtfrsList[5]['msrTgl'] == 0) {noteVolume = noteVolumeBack;} else {}   //restoring normal Vol    // to (iEnds - 1) note will not hear    2 of 2
+                                            shortOrLongNum = 1; // resetting to Long ones !!!
+                                            if((csvLst[i][j].toString().contains("i") && showFingeringOnButtons[j] == 0) || (csvLst[i][j].toString().contains("t") && showFingeringOnButtons[j] == 1)) {
+                                              showLocalFinger=true;    // if notation contains "index finger" and by default rule this string played not by Index
+                                            } else {
+                                              showLocalFinger=false;   // if notation contains "thumb finger" and by default rule this string played not by Thumb
+                                            } // end if, for show Locally Fingering   // As planned, local finger is shown ONLY if the default fingering rule is not followed
+                                            addButtonsStates(j, showLocalFinger);        // pressing the button
+                                          }  // will be hear async parallel simultaneously sounds notes by one bit and aftertones of previous bits notes
+                                        } // ind for (j)
+                                  //////////////////////////// End Current Bit Traversal by "j", PlayingNotes ////////////////////////////
+                                        var sw1 = Stopwatch()..start();
+                                        while((ntTblNtfrsList[25]['onTapCollisionPrevention_1'] == 1 || ntTblNtfrsList[26]['onTapCollisionPrevention_2'] == 1 || ntTblNtfrsList[27]['onTapCollisionPrevention_3'] == 1)  && sw1.elapsedMilliseconds < 625)
+                                        {
+                                          // NO ENDLESS LOOP !!!  2 SECONDS
+                                        }
+                                        ntTblNtfrsList = [...ntTblNotifier.value];
+                                          if(ntTblNtfrsList[25]['onTapCollisionPrevention_1'] == 0 && ntTblNtfrsList[26]['onTapCollisionPrevention_2'] == 0 && ntTblNtfrsList[27]['onTapCollisionPrevention_3'] == 0) {
+                                            if (shouldChangeView == true) {
+                                              await changeTableView(i, iStarts, dontChangeView);  // await added!
+                                            } else {} // instead of 256 "ntTblNtfrsList[21]['nTcolS']!" replace to  "ntTblNtfrsList[21]['ntTblNtfrsList[21]['nTcolS']!']" . It seems impossible!
+                                          } else {} //  end onTap collision prevention
+                                        //
+                                        //
+                                        if(OisLEFT == 0 && OisRIGHT == 0 && rSTART?.round() != 2*ntTblNtfrsList[21]['nTcolS']!) {
+                                          iEnds = maxLength;
+                                          // if TSV, prevention of iEnds range error at the end of playback (2 of 2):
+                                          if(wasTSVextDetected==true || googleCSVdetected==true) { // ??? TSV needs minus one element at the end (this is the difference from CSV):
+                                            iEnds = csvLst.length - 0;
+                                          } else {
+                                          } //end if TSV was detected
+                                        } else {}; //end if
+                                        if((i+1).remainder(ntTblNtfrsList[21]['nTcolS']!*2) == 0) {dontChangeView = false;} else {} //end if // don't change table view after manually toggle button play
+                                        /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                                  ///////////////////////------End Change table View------////////////////////////
+                                  //
+                                  //////////////////////// imitation of cancelable Delay: ///////////////// Eeach time calling function, because "crntSldrValT" may changed any time by user
+                                        if(tempoCoeff<=1.8) { // Do cancelable delay:
+                                          // toDo: first pause of 3 (silence) before short-sounding notes buttons release:
+                                          for (int u = 0; u < 3; u++) {await Future.delayed(reCalculateMD());if(cnslDelay1Ntfr.value==true){u=3; cnslDelay1Ntfr.value=false;}} // end for
+                                          if (jBtnRelease.isNotEmpty) {                                                                 // toDo: setState() N2
+                                            for (int k in jBtnRelease){   // for simple Lists Use simple construction "in"
+                                              releaseButtonsStates(k);    // release shortly sounded notes buttons
+                                            } // end for (k)
+                                          } else {} // end if (jBtnRelease.length)
+                                          jBtnRelease.clear();  // the best way to clear List
+                                          // toDo: second pause of 3 (silence) before normal long-sounding notes buttons release:
+                                          for (int u = 0; u < 7; u++) {await Future.delayed(reCalculateMD());if(cnslDelay1Ntfr.value==true){u=7; cnslDelay1Ntfr.value=false;}} // end for
+                                          releaseButtonsStates(0);         // release All notes buttons                                // toDo: setState() N3
+                                          // toDo: third pause of 3 (silence) before starting next bit:
+                                          for (int u = 0; u < 5; u++) {await Future.delayed(reCalculateMD());if(cnslDelay1Ntfr.value==true){u=5; cnslDelay1Ntfr.value=false;}} // end for
+                                        } else {      // too high table visualisation speed, NO cancelable delay:
+                                          // toDo: first pause of 3 (silence) before short-sounding notes buttons release:
+                                          await Future.delayed(reCalculateMD2());
+                                          if (jBtnRelease.isNotEmpty) {                                                                 // toDo: setState() N2
+                                            for (int k in jBtnRelease){   // for simple Lists Use simple construction "in"
+                                              releaseButtonsStates(k);    // release shortly sounded notes buttons
+                                            } // end for (k)
+                                          } else {} // end if (jBtnRelease.length)
+                                          jBtnRelease.clear();  // the best way to clear List
+                                          // toDo: second pause of 3 (silence) before normal long-sounding notes buttons release:
+                                          await Future.delayed(reCalculateMD2());
+                                          releaseButtonsStates(0);         // release All notes buttons                                // toDo: setState() N3
+                                          // toDo: third pause of 3 (silence) before starting next bit:
+                                          await Future.delayed(reCalculateMD2());
+                                        } //end if additional tempo coeff > 1
+                                  ////////////////////// End imitation of cancelable Delay//////////////////                            // toDo: setState() N4
+                                  //
+                                  ////////////////////// Completion naturally //////////////////////
+                                        if (i == iEnds - 1) {      // completion naturally upon reaching iEnds OR at the end of the List
+                                          shouldChangeView = false;
+                                          // print('ends naturally');
+                                          ntTblNtfrsList = [...ntTblNotifier.value];
+                                          if(fromTheBegin) {
+                                            ntTblNtfrsList[2]['startBit']         = 0;
+                                            ntTblNtfrsList[3]['playingBit']       = 0;
+                                            ntTblNtfrsList[4]['tableChangeCount'] = 1;
+                                            ntTblNtfrsList[5]['msrTgl'] = 0;
+                                            ntTblNtfrsList[6]['tableChangeCount32']  = 1;
+                                            ntTblNtfrsList[7]['tableChangeCount64']  = 1;
+                                            ntTblNtfrsList[8]['tableChangeCount128'] = 1;
+                                            setState(() {toggleIcnMsrBtn = true;oneTraversingInstanceLaunched = false;});
+                                          } else {                          // completion naturally at the end of the selected Range
+                                            ntTblNtfrsList[5]['msrTgl'] = 0;
+                                            //                           // So that there is no empty space at the cursor position after stopping:
+                                            ntTblNtfrsList[3]['playingBit']       = maxLength;
+                                            ntTblNotifier.value = ntTblNtfrsList;
+                                            //
+                                            setState(() {toggleIcnMsrBtn = true;oneTraversingInstanceLaunched = false;});
+                                          } //end if(start from the begin)
+                                          ntTblNotifier.value = ntTblNtfrsList;
+                                          setState(() {
+                                            ntTblNtfrsList = [...ntTblNotifier.value];
+                                            isSwitched_32_64_128 = ntTblNtfrsList[15]['listener_32_64_128']!;
+                                            mode_3264_or_64128 = ntTblNtfrsList[16]['listener_3264_64128']!;
+                                          });
+                                        } // end if(): setting Icon on Measure Button to "Play" (default)
+                                  /////////////////// End Completion naturally /////////////////////
+                                  //
+                                  //
+                                  //// Extra Delay (especially relevant: to Android - ONLY at App launch and first file load - it is accelerating, so, it needs to some slowDown):
+                                  //// toDo: There was a very significant smoothness, it's very good:
+                                        if(stopwatch.elapsedMilliseconds < 100) {   // < 100 mS clean code execution time
+                                          for (int u = 0; u < 6; u++) {await Future.delayed(reCalculateMD());} // end for(u)
+                                        } else {} //end if
+                                  //
+                                  //
+                                  ///////////////////////////////////////////// End Stopwatch 3 of 3 ////////////////////////////////////////////////
+                                        await setDataSharedPref();   // CALL
+                                      } // end for (i)                                        // "oneTraversingInstanceLaunched" is a Double-start prevention
+                                      await checkIfTCCareOutOfLimits();  // if previous session ends incorrectly or table change view ends incorrectly
+                                      oneTraversingInstanceLaunched = false; setState(() {}); // after additional list traversal it could be "true", so setting it to "false" at the end
+                                    } // end listTraversal()
 //
   Future<void> playFromList (int istartsRestart) async {      // ASYNC because we use "await", resolves a problem with disappeared buttons with status 'pressed'
     int iStarts = 1;
