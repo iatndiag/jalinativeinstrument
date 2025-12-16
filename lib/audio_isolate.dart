@@ -1,9 +1,12 @@
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'dart:developer' as developer;   //  usage:  developer.log(message.toString());
 import 'dart:isolate';
 import 'dart:async';
 import '../constants/app_constants_nd_vars.dart';
-import 'package:audioplayers/audioplayers.dart';
+// import 'package:audioplayers/audioplayers.dart';
 import 'audio_data.dart';
+final SoLoud audioEngine = SoLoud.instance;
+Map<String, AudioSource> soundCache = {};
 // import 'audio_data.dart'; // visualMarks и krSnd
 // ---------------------------------------------------------------- SOLUTION: Timer Should Be In The Second Isolate Without GUI
   int ISOrngEnd = 64;               // specify
@@ -77,7 +80,7 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
     } // end reCalculateMD2()
  //
  //
-    if (message is List) {
+    if (message is List && message.isNotEmpty) {
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
       ISOrangeStart         = message[0][0][0]['rangeStart'];                                      //  = = = = = = = = = = =  operator !!!
       ISOrangeEnd           = message[0][0][1]['rangeEnd'];                                        // It is the assignment operator that is required! It simulates an event listener
@@ -96,7 +99,7 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
       ISOonTapCollisionPrevention_3 = message[0][0][27]['onTapCollisionPrevention_3'];
       ISOiStarts          = message[1][0];
       ISOiEnds            = message[2][0]; //developer.log(ISOiEnds.toString());
-      // ISOjBtnRelease      = message[3][0];
+      ISOjBtnRelease      = message[3][0];
       ISOcsvLst           = message[4][0];
       ISOnotesByBit       = message[5][0];
       ISOrngExtend        = message[6][0];
@@ -110,6 +113,7 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
       ISObuttonsNotifier   = message[14][0];
       //
       //
+      developer.log(ISOrangeStart.toString());
       //
       //
       void addButtonsStates(int btnNum, bool locFing) {                                        // See also SplayTreeMap (Sorted! HashMap), "Splay"!
@@ -269,100 +273,42 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
 //
 //
 //
-      void playSound(int tuning, int number, int shortOrLong, double nVol, int ext) async {
-        final player = AudioPlayer(); // only one final audioPlayer
-        player.setVolume(nVol);
-        String xtsn_ = '';  String nT_ = '';  String aP_ = '';  // string extension //string Note    //assetsPath
-        int tI_ = tuning - 1; int nI_ = number - 1; int sOl_ = shortOrLong - 1;     //tune index     //number of the note index    //shortOrLong note index
+      Future<void> playSound(int tuning, int number, int shortOrLong, double nVol, int ext) async {
+        if (!audioEngine.isInitialized) {
+          await audioEngine.init();
+        }
+        String xtsn_ = '';
+        String aP_ = '';
+        int tI_ = tuning - 1;
+        int nI_ = number - 1;
+        int sOl_ = shortOrLong - 1;
         switch (ext) {
-          case 1: xtsn_ = 'WAV'; aP_ = 'wav/';  break;      case 2: xtsn_ = 'm4a'; aP_ = 'm4a/';  break;
-          case 3: xtsn_ = '';    aP_ = '';      break;      case 4: xtsn_ = 'mp3'; aP_ = 'mp3/';  break;
-          default: {  xtsn_ = 'WAV'; aP_ = 'wav/';  } break;
-        } //end switch
-/////////// TUNING MATCHING WITH THE LIST ROW NUMBER: ///////////
-        if (tuning == 11) {tI_ =  3 - 1; aP_ = 'wavn/';} else {}   // two new sets of samples for Ionian (F) Major Phryg.(A) Lydian (Bb) MixLyd(C) Aeol(D) and Lydian (F) Aeol(A) Dor(D) tunings
-        if (tuning == 12) {tI_ =  4 - 1; aP_ = 'wavn/';} else {}
-        if (tuning == 14) {tI_ = 10 - 1; aP_ = 'wav/';} else {}   // ROW of krSnd minus One
-        if (tuning == 15) {tI_ = 11 - 1; aP_ = 'wav/';} else {}
-////////// END TUNING MATCHING WITH THE LIST ROW NUMBER /////////
-        String kM_; // String as index (key) in hash table
-        kM_ = krSnd[tI_][nI_][sOl_].toString();
-        nT_ = aP_ + krSnd[tI_][nI_][sOl_] + '.' + xtsn_; // = ready path to the sound file
-        switch (playerMode) {
-          case 1:                                                 // build mode: android
-            await player.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);  // Android Sounds fine From Here, Mode for each note: lowLatency ! But Memory Leak Windows! Multiple Endless list of Volume Regulators Linux!
-            break;
-          case 2:                                                 // build mode: Windows
-          ///////////////////////////////// Prevention of Memory Leakage Win ////////////////////////////////
-            if(audioPlayersMap.containsKey(kM_)) {} else {                // do nothing
-              audioPlayersMap.addEntries({kM_ : AudioPlayer()}.entries);  // adding AudioPlayer for absolutely new note, .stop() method !!!
-            } //end if
-            audioPlayersMap[kM_]?.setVolume(nVol); await audioPlayersMap[kM_]?.stop(); await audioPlayersMap[kM_]?.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);
-            ///////////////////////////////// End Prevent Memory Leak Win /////////////////////////////////////
-            break;
-          case 3:                                                 // dart midi, only Android and iOS, functions and package commented, not ready yet
-          // midiPlay(60); // print('Playing ~ 60'); // toDo: correspondence table of midi notes (0...256) only Android, iOS
-            break;
-          case 4:                                                 // Web JavaScript via Tone.js, Sounds like web midi Synth without delay at all
-          // playJS(60); // needed correspondence table // works fine  // DO Not Use setState()s !!!
-          // await Future.delayed(Duration(milliseconds: ((mS + mS*(1.0-crntSldrValT))/tempoCoeff).round()));
-          // playNoteJS('E4'); // native Web tonic JS, works perfect!
-            dynamic keyTuning = visualMarks (tuning);
-            var noteJS = keyTuning[number].values.elementAt(1).toString(); // toDo: split string (remove -15c, +5c etc.)
-//playNoteJS(noteJS); // native Web tonic JS, works perfect!
-            await Future.delayed(Duration(milliseconds: ((mS + mS*(1.0-crntSldrValT))/tempoCoeff).round()));
-            // plaYm4a();
-            break;
-          case 5:                                                 // Web JavaScript via Tone.js, trying to play m4a via Tone.js
-            dynamic keyTuning = visualMarks (tuning);
-            var noteJS = keyTuning[number].values.elementAt(1).toString();
-//plaYm4a(noteJS);
-            await Future.delayed(Duration(milliseconds: ((mS + mS*(1.0-crntSldrValT))/tempoCoeff).round()));
-            break;
-          case 6:                                                 // Linux, maybe MacOs too?
-          //player.audioCache.loadAsFile('$nT_');                 // works fine, Linux tested
-            String tempCLinux = '0';
-            String tempCLinux_toRelease = '0';
-            // Prevention of endless Multiple instanses of Volume Regulators in Linux Sound Settings:
-            //if(audioPlayersMapLinux.containsKey(ntTblNtfrsList[24]['counterPlayerLinux'].toString())) {} else {}                // do nothing
-            tempCLinux = ntTblNtfrsList[24]['counterPlayerLinux'].toString();
-            if(audioPlayersMapLinux.length < 7) {
-              audioPlayersMapLinux.addEntries({tempCLinux : AudioPlayer()}.entries);  // adding AudioPlayer for absolutely new note, .stop() method !!!
-            } else {
-              if(ntTblNtfrsList[24]['counterPlayerLinux'] == 6 && audioPlayersMapLinux.length == 7) {       // LINUX SOLUTION IS a RELEASE()    NO Dispose()   !!!
-                tempCLinux_toRelease = '0';
-              } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 5 && audioPlayersMapLinux.length == 7) {       // seven elements are quite enough for the previous notes to sound out and the zero element could be filled again, and so on in a circle
-                tempCLinux_toRelease = '6';
-              } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 4 && audioPlayersMapLinux.length == 7) {
-                tempCLinux_toRelease = '5';
-              } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 3 && audioPlayersMapLinux.length == 7) {
-                tempCLinux_toRelease = '4';
-              } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 2 && audioPlayersMapLinux.length == 7) {
-                tempCLinux_toRelease = '3';
-              } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 1 && audioPlayersMapLinux.length == 7) {
-                tempCLinux_toRelease = '2';
-              } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 0 && audioPlayersMapLinux.length == 7) {
-                tempCLinux_toRelease = '1';
-              } else {}
-            } //end if
-            audioPlayersMapLinux[tempCLinux]?.setVolume(nVol);
-            //await audioPlayersMapLinux[tempCLinux]?.stop(); await audioPlayersMapLinux[tempCLinux]?.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);
-            await audioPlayersMapLinux[tempCLinux]?.stop(); await audioPlayersMapLinux[tempCLinux]?.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);
-            if(audioPlayersMapLinux.length >= 7)  {
-              await audioPlayersMapLinux[tempCLinux_toRelease]?.release();    // LINUX SOLUTION IS a RELEASE()    NOT Dispose()   !!!   Number of Volume Regulators Stops to grow!
-              //await audioPlayersMapLinux[tempCLinux_toRelease]?.dispose();    // sound disappers after number of volume regulators overflow
-            } else {}       // Linux Solution is DISPOSE()
-            if(ntTblNtfrsList[24]['counterPlayerLinux']! < 6) {ntTblNtfrsList[24]['counterPlayerLinux'] = ntTblNtfrsList[24]['counterPlayerLinux']! + 1;} else {ntTblNtfrsList[24]['counterPlayerLinux'] = 0;}
-            sendPortToMain.send('SETNOTIFIERREQUEST');
-            // await player.dispose();     // NO DISPOSE! Linux added  RELEASE() to delete volume Regulators (Sliders). Sounds stops Linux when Number of volume Regulators Overfilled !!!
-            // player.release();
-            break;
-          default:
-            await player.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);  // Sounds From Here, Mode for each note: lowLatency ! But Memory Leak Windows!
-            break;
-        } //end switch (playerMode)
-//
-      } // end PlaySound ()
+          case 1: xtsn_ = 'wav'; aP_ = 'assets/wav/'; break;
+          case 2: xtsn_ = 'm4a'; aP_ = 'assets/m4a/'; break;
+          case 4: xtsn_ = 'mp3'; aP_ = 'assets/mp3/'; break;
+          default: xtsn_ = 'wav'; aP_ = 'assets/wav/'; break;
+        }
+        if (tuning == 11) { tI_ = 3 - 1; aP_ = 'assets/wavn/'; }
+        if (tuning == 12) { tI_ = 4 - 1; aP_ = 'assets/wavn/'; }
+        if (tuning == 14) { tI_ = 10 - 1; aP_ = 'assets/wav/'; }
+        if (tuning == 15) { tI_ = 11 - 1; aP_ = 'assets/wav/'; }
+        String fileName = krSnd[tI_][nI_][sOl_].toString();
+        String fullPath = '$aP_$fileName.$xtsn_';
+        try {
+          AudioSource? source;
+          if (soundCache.containsKey(fullPath)) {
+            source = soundCache[fullPath];
+          } else {
+            source = await audioEngine.loadAsset(fullPath);
+            soundCache[fullPath] = source;
+          }
+          if (source != null) {
+            await audioEngine.play(source, volume: nVol);
+          }
+        } catch (e) {
+          print(e);
+        }
+      }
 //
 //
       //
@@ -506,8 +452,7 @@ sendPortToMain.send('playingBit' + ISOplayingBit.toString());
           for (int j = 1; j <= ISOnotesByBit; j++) {     // (j) is number of playing string at the moment, and  shortOrLong - is variant of note's length // <=   <=   <=  less or equal
             if (csvLst[i][j] != "") {                 // for simple Lists Use "add" method!!          // ISOshortOrLongNum = 1 or 2 (Long|Short)  // You not to have to escape "asterisk", or "\" an "raw"
               if (csvLst[i][j].toString().contains("*")) {ISOshortOrLongNum = 2; ISOjBtnRelease.add(j);} else {} // note with (*) is a Short Note, sounds faster //LONG NOTES NOT WORKED BY THE REASON OF LIST.FROM data1, inherit changed it's parent!!! You not to have to escape symbol '\' or use a raw string
-              if(ntTblNtfrsList[5]['msrTgl'] == 0) {noteVolumeBack = noteVolume; noteVolume = 0.0;} else {}           // to (ISOiEnds - 1) note will not hear    1 of 2
-              playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextension);  // sounds from here !
+playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextension);  // sounds from here !
               if(ntTblNtfrsList[5]['msrTgl'] == 0) {noteVolume = noteVolumeBack;} else {}   //restoring normal Vol    // to (ISOiEnds - 1) note will not hear    2 of 2
               ISOshortOrLongNum = 1; // resetting to Long ones !!!
               if((csvLst[i][j].toString().contains("i") && showFingeringOnButtons[j] == 0) || (csvLst[i][j].toString().contains("t") && showFingeringOnButtons[j] == 1)) {
