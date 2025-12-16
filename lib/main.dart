@@ -115,7 +115,7 @@ Map<String, AudioSource> soundCache = {};
 //void main() {                                            // was without command line arguments               Adnroid
 void main(List<String> arguments) async{                        // with List of Win exe command line arguments  Windows
   WidgetsFlutterBinding.ensureInitialized();
-  await SoLoud.instance.init();
+  // await SoLoud.instance.init();
   if (arguments.isNotEmpty) {argument0 = arguments[0].replaceAll('\\', '/');} else {}  // replace all \-slashes to /-slashes in Path   Windows
   //***********************************************************      Conditional Target Platform !!! Blank Screen Android!!! Blank Screen Windows!!!! (but Process Runs!)
   // debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;  // for build release, Comment it if Windows process runs but Window DOES NOT shown !!!
@@ -1743,16 +1743,27 @@ if (Platform.isWindows) {
 //
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
   void _setupPlayerIsolate(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
+    // developer.log(csvLst.toString());
 /////// SEND INITIAL DATA, add New Data Here:
-    List<List<dynamic>> allData = [[ntTblNtfrsList], [iStarts], [iEnds], jBtnRelease, csvLst, [notesByBit], [rngExtend], [toggleIcnMsrBtn],
-      [fromTheBegin], [shortOrLongNum], [selectedtuningNum], [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]];
+//     List<List<dynamic>> allData = [[ntTblNtfrsList], [iStarts], [iEnds], jBtnRelease, csvLst, [notesByBit], [rngExtend], [toggleIcnMsrBtn],
+//       [fromTheBegin], [shortOrLongNum], [selectedtuningNum], [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]];
+    List<List<dynamic>> allData = [
+      [ntTblNtfrsList], [iStarts], [iEnds],
+      jBtnRelease is List ? jBtnRelease : [],
+      csvLst is List ? csvLst : [],
+      [notesByBit], [rngExtend], [toggleIcnMsrBtn],
+      [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
+      [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]
+    ];
+
+
 ///////
 // developer.log(allData.toString());
 // List<List<dynamic>> allData = [[notesByBit], [rngExtend]];
     _receivePortFromPlayer = ReceivePort();
     _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, _receivePortFromPlayer!.sendPort);
     void _sendDataToPlayer(allData) {
-      if (_sendPortToPlayer != null) {
+      if (_sendPortToPlayer != null && allData is List && allData.isNotEmpty) {
         _sendPortToPlayer!.send(allData);
         // developer.log("test_1: Data sent to player isolate.");
       } else {
