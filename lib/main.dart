@@ -89,7 +89,7 @@ import 'package:crc32_checksum/crc32_checksum.dart';    // to calculate short ch
 import 'package:shared_preferences/shared_preferences.dart'; // to store last seen mode (32/64/128), measure number, selected range by each checksum of track_performer info
 import 'dart:typed_data';                               // 1) for pitch detector and (planned:) 2) to read as bytes instruction pdf, editor xlsm (from assets folder) for writing it into Android Download Folder
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ pitch_detector (tuner) with audio_capture  2 of 4  // Only Android, iOS and maybe Linux
-import 'package:flutter_audio_capture/flutter_audio_capture.dart';  // audio_capture 1 of 4
+// import 'package:flutter_audio_capture/flutter_audio_capture.dart';  // audio_capture 1 of 4
 import 'package:pitch_detector_dart/pitch_detector.dart';
 import 'package:pitchupdart/instrument_type.dart';
 import 'package:pitchupdart/pitch_handler.dart';
@@ -194,7 +194,7 @@ class _JaliinstrumentState extends State<Jaliinstrument> with WidgetsBindingObse
   ReceivePort? _receivePortFromPlayer;
 /////// end NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 2 OF 3
 //
-  FlutterAudioCapture _audioRecorder = new FlutterAudioCapture();  // NEW recorder from audio_capture 1 of 4
+//   FlutterAudioCapture _audioRecorder = new FlutterAudioCapture();  // NEW recorder from audio_capture 1 of 4
 //
 //
   Future getAndSetWindowSize() async {
@@ -323,7 +323,7 @@ void playNote(String note) {            // simple JS tonic
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 1 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
     _setupPlayerIsolate(1, 1, [], csvLst, 1, false);
 /////// end NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 1 OF 3
-    _audioRecorder.init();              // Initialize NEW recorder from audio_capture 2 of 4
+//     _audioRecorder.init();              // Initialize NEW recorder from audio_capture 2 of 4
     //
     initStateFunctions();       //CALL
     addNtTblNotifierStates();   // was moved here from initStateFunctions.  //*** IF ASYNC FUNCTION WILL BE BEFORE THE SYNC FUNCTION, IT WILL RETURN RANDOM VALUES !!! SEE print(themeappLightDark) in getAppSettingsSharedPref()
@@ -2638,7 +2638,7 @@ if (Platform.isWindows) {
     var prmssStatus = await Permission.microphone.status;
     if (prmssStatus.isGranted) {
 //////////////////////////////////////
-      await _audioRecorder.start(listenerT, onErrorT, sampleRate: 44100, bufferSize: 3000); // recorder from audio_capture 3 of 4
+//       await _audioRecorder.start(listenerT, onErrorT, sampleRate: 44100, bufferSize: 3000); // recorder from audio_capture 3 of 4
       setState(() {currDetectedNote = ""; currTuneStatus = "Play something";});
 //////////////////////////////////////
     } else if (prmssStatus.isDenied) {
@@ -2647,7 +2647,7 @@ if (Platform.isWindows) {
   }   // end _startCapture()
 //
   Future<void> _stopCapture() async {
-    await _audioRecorder.stop();                                                           // recorder from audio_capture 4 of 4
+    // await _audioRecorder.stop();                                                           // recorder from audio_capture 4 of 4
     setState(() {currDetectedNote = ""; currTuneStatus = "Click on start";});
   }   // end _stopCapture()
 //
