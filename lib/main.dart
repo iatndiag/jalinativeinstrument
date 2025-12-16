@@ -6,6 +6,7 @@
 // DART-Lang, Musical Tuition Project: African Harp Kora : Player, NotationReader, Tuner:  multi-Platform //
 //********************************************************************************************************//
 /////////////////////////////////////////////////
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'dart:developer' as developer;
 import 'dart:isolate';
 import 'package:jalinativeinstrument/utils/color_utils.dart';
@@ -70,7 +71,7 @@ import 'package:csv/csv.dart';                            // converting csv
 import 'package:csv/csv_settings_autodetection.dart';     // autodetection csv ?dilimeters
 import 'package:flutter/foundation.dart' show ByteData, debugDefaultTargetPlatformOverride, kDebugMode, kIsWeb; // in release mode it should be so
 import 'dart:ui';
-import 'package:audioplayers/audioplayers.dart'; // toDo: 2of5 try Web without audioplayers (look pubspec.yaml also! 1of5)
+// import 'package:audioplayers/audioplayers.dart'; // toDo: 2of5 try Web without audioplayers (look pubspec.yaml also! 1of5)
 // toDo: 3of5   dart pub remove audioplayers  ,       dart pub get audioplayers
 // toDo: 4of5   dart pub remove audioplayers_web  ,   dart pub get audioplayers_web
 // toDo: 5of5   dart pub remove soundpool_web  ,      dart pub get soundpool_web
@@ -108,8 +109,13 @@ import 'package:http/http.dart' as http;    //flutter pub add http
 // import removed, you can find it any time by this link
 //
 //
+final SoLoud audioEngine = SoLoud.instance;
+Map<String, AudioSource> soundCache = {};
+//
 //void main() {                                            // was without command line arguments               Adnroid
-void main(List<String> arguments) {                        // with List of Win exe command line arguments  Windows
+void main(List<String> arguments) async{                        // with List of Win exe command line arguments  Windows
+  WidgetsFlutterBinding.ensureInitialized();
+  await SoLoud.instance.init();
   if (arguments.isNotEmpty) {argument0 = arguments[0].replaceAll('\\', '/');} else {}  // replace all \-slashes to /-slashes in Path   Windows
   //***********************************************************      Conditional Target Platform !!! Blank Screen Android!!! Blank Screen Windows!!!! (but Process Runs!)
   // debugDefaultTargetPlatformOverride = TargetPlatform.fuchsia;  // for build release, Comment it if Windows process runs but Window DOES NOT shown !!!
@@ -195,7 +201,8 @@ class _JaliinstrumentState extends State<Jaliinstrument> with WidgetsBindingObse
     Size fullScreenSize = await DesktopWindow.getFullScreen();
  // ntTableCaptionTxt = await fullScreenSize.toString(); setState(() {});   // uncomment to see full screen size
     if(fullScreenSize.height > 1600) {
-      await DesktopWindow.setWindowSize(Size(1300,1600));                   // Setting Desktop Window Size // SEE: "windows/runner/main.cpp" to setUp OriginPoint
+   // await DesktopWindow.setWindowSize(Size(1300,1600));                   // Setting Desktop Window Size // SEE: "windows/runner/main.cpp" to setUp OriginPoint
+      await DesktopWindow.setWindowSize(Size(800,1100));                   // Setting Desktop Window Size // SEE: "windows/runner/main.cpp" to setUp OriginPoint
     } else {} //end if
     if(Platform.isLinux && fullScreenSize.height > 1400) {
       await DesktopWindow.setWindowSize(Size(720,1600));
@@ -332,7 +339,7 @@ void playNote(String note) {            // simple JS tonic
 //   if (playerMode==3) {loadSF2(midiValue);} else {flutterMidi.prepare(sf2: null);}  // flutter_midi: commented 3 of 6
 //////////////////////////////////////////////////////////////////////////////
     //getAndSetWindowSize();  // setting Window Size for Desktop App (Win, Linux, MacOS) toDo: NotWork! // SEE: "windows/runner/main.cpp" to setUp OriginPoint
-    if(tempSMonitor == '') {DesktopWindow.setWindowSize(Size(1600,1600));
+    if(tempSMonitor == '') {DesktopWindow.setWindowSize(Size(800,1100));
       if(Platform.isLinux) {DesktopWindow.setWindowSize(Size(860,1600));} else {}
                             } else {} //end if  // Setting Desktop Window Size // SEE: "windows/runner/main.cpp" to setUp OriginPoint
     if (toShowVLbls && !wasShownVLblsOnce) {showBigLabelsShortly();  toShowVLbls = true;} else {showVerticalBigLables = false;}
@@ -823,9 +830,9 @@ void playNote(String note) {            // simple JS tonic
 //
   Future <void> playerInitWithEmptyNote() async {
     if (csvMode != 2 && playerMode != 6) { // not for Web, not for Linux
-      final player = AudioPlayer(); // only one final audioPlayer
-      player.setVolume(0.9);
-      player.play(AssetSource('m4a/000L.m4a'), mode: PlayerMode.lowLatency);  // try to initialize player, 000L is silent sample
+      // final player = AudioPlayer(); // only one final audioPlayer
+      // player.setVolume(0.9);
+      // player.play(AssetSource('m4a/000L.m4a'), mode: PlayerMode.lowLatency);  // try to initialize player, 000L is silent sample
     } else {} //end if
   }
 //
@@ -1357,100 +1364,42 @@ if (Platform.isWindows) {
 //tuning has been selected
 //
 //
-  void playSound(int tuning, int number, int shortOrLong, double nVol, int ext) async {
-    final player = AudioPlayer(); // only one final audioPlayer
-    player.setVolume(nVol);
-    String xtsn_ = '';  String nT_ = '';  String aP_ = '';  // string extension //string Note    //assetsPath
-    int tI_ = tuning - 1; int nI_ = number - 1; int sOl_ = shortOrLong - 1;     //tune index     //number of the note index    //shortOrLong note index
+  Future<void> playSound(int tuning, int number, int shortOrLong, double nVol, int ext) async {
+    if (!audioEngine.isInitialized) {
+      await audioEngine.init();
+    }
+    String xtsn_ = '';
+    String aP_ = '';
+    int tI_ = tuning - 1;
+    int nI_ = number - 1;
+    int sOl_ = shortOrLong - 1;
     switch (ext) {
-      case 1: xtsn_ = 'WAV'; aP_ = 'wav/';  break;      case 2: xtsn_ = 'm4a'; aP_ = 'm4a/';  break;
-      case 3: xtsn_ = '';    aP_ = '';      break;      case 4: xtsn_ = 'mp3'; aP_ = 'mp3/';  break;
-      default: {  xtsn_ = 'WAV'; aP_ = 'wav/';  } break;
-    } //end switch
-/////////// TUNING MATCHING WITH THE LIST ROW NUMBER: ///////////
-    if (tuning == 11) {tI_ =  3 - 1; aP_ = 'wavn/';} else {}   // two new sets of samples for Ionian (F) Major Phryg.(A) Lydian (Bb) MixLyd(C) Aeol(D) and Lydian (F) Aeol(A) Dor(D) tunings
-    if (tuning == 12) {tI_ =  4 - 1; aP_ = 'wavn/';} else {}
-    if (tuning == 14) {tI_ = 10 - 1; aP_ = 'wav/';} else {}   // ROW of krSnd minus One
-    if (tuning == 15) {tI_ = 11 - 1; aP_ = 'wav/';} else {}
-////////// END TUNING MATCHING WITH THE LIST ROW NUMBER /////////
-    String kM_; // String as index (key) in hash table
-    kM_ = krSnd[tI_][nI_][sOl_].toString();
-    nT_ = aP_ + krSnd[tI_][nI_][sOl_] + '.' + xtsn_; // = ready path to the sound file
-    switch (playerMode) {
-      case 1:                                                 // build mode: android
-          await player.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);  // Android Sounds fine From Here, Mode for each note: lowLatency ! But Memory Leak Windows! Multiple Endless list of Volume Regulators Linux!
-        break;
-      case 2:                                                 // build mode: Windows
-        ///////////////////////////////// Prevention of Memory Leakage Win ////////////////////////////////
-        if(audioPlayersMap.containsKey(kM_)) {} else {                // do nothing
-          audioPlayersMap.addEntries({kM_ : AudioPlayer()}.entries);  // adding AudioPlayer for absolutely new note, .stop() method !!!
-        } //end if
-        audioPlayersMap[kM_]?.setVolume(nVol); await audioPlayersMap[kM_]?.stop(); await audioPlayersMap[kM_]?.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);
-        ///////////////////////////////// End Prevent Memory Leak Win /////////////////////////////////////
-        break;
-      case 3:                                                 // dart midi, only Android and iOS, functions and package commented, not ready yet
-      // midiPlay(60); // print('Playing ~ 60'); // toDo: correspondence table of midi notes (0...256) only Android, iOS
-        break;
-      case 4:                                                 // Web JavaScript via Tone.js, Sounds like web midi Synth without delay at all
-      // playJS(60); // needed correspondence table // works fine  // DO Not Use setState()s !!!
-      // await Future.delayed(Duration(milliseconds: ((mS + mS*(1.0-crntSldrValT))/tempoCoeff).round()));
-      // playNoteJS('E4'); // native Web tonic JS, works perfect!
-        dynamic keyTuning = visualMarks (tuning);
-        var noteJS = keyTuning[number].values.elementAt(1).toString(); // toDo: split string (remove -15c, +5c etc.)
-        playNoteJS(noteJS); // native Web tonic JS, works perfect!
-        await Future.delayed(Duration(milliseconds: ((mS + mS*(1.0-crntSldrValT))/tempoCoeff).round()));
-      // plaYm4a();
-        break;
-      case 5:                                                 // Web JavaScript via Tone.js, trying to play m4a via Tone.js
-        dynamic keyTuning = visualMarks (tuning);
-        var noteJS = keyTuning[number].values.elementAt(1).toString();
-        plaYm4a(noteJS);
-        await Future.delayed(Duration(milliseconds: ((mS + mS*(1.0-crntSldrValT))/tempoCoeff).round()));
-        break;
-      case 6:                                                 // Linux, maybe MacOs too?
-      //player.audioCache.loadAsFile('$nT_');                 // works fine, Linux tested
-        String tempCLinux = '0';
-        String tempCLinux_toRelease = '0';
-      // Prevention of endless Multiple instanses of Volume Regulators in Linux Sound Settings:
-          //if(audioPlayersMapLinux.containsKey(ntTblNtfrsList[24]['counterPlayerLinux'].toString())) {} else {}                // do nothing
-          tempCLinux = ntTblNtfrsList[24]['counterPlayerLinux'].toString();
-          if(audioPlayersMapLinux.length < 7) {
-            audioPlayersMapLinux.addEntries({tempCLinux : AudioPlayer()}.entries);  // adding AudioPlayer for absolutely new note, .stop() method !!!
-          } else {
-            if(ntTblNtfrsList[24]['counterPlayerLinux'] == 6 && audioPlayersMapLinux.length == 7) {       // LINUX SOLUTION IS a RELEASE()    NO Dispose()   !!!
-              tempCLinux_toRelease = '0';
-            } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 5 && audioPlayersMapLinux.length == 7) {       // seven elements are quite enough for the previous notes to sound out and the zero element could be filled again, and so on in a circle
-              tempCLinux_toRelease = '6';
-            } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 4 && audioPlayersMapLinux.length == 7) {
-              tempCLinux_toRelease = '5';
-            } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 3 && audioPlayersMapLinux.length == 7) {
-              tempCLinux_toRelease = '4';
-            } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 2 && audioPlayersMapLinux.length == 7) {
-              tempCLinux_toRelease = '3';
-            } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 1 && audioPlayersMapLinux.length == 7) {
-              tempCLinux_toRelease = '2';
-            } else if (ntTblNtfrsList[24]['counterPlayerLinux'] == 0 && audioPlayersMapLinux.length == 7) {
-              tempCLinux_toRelease = '1';
-            } else {}
-          } //end if
-          audioPlayersMapLinux[tempCLinux]?.setVolume(nVol);
-        //await audioPlayersMapLinux[tempCLinux]?.stop(); await audioPlayersMapLinux[tempCLinux]?.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);
-          await audioPlayersMapLinux[tempCLinux]?.stop(); await audioPlayersMapLinux[tempCLinux]?.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);
-          if(audioPlayersMapLinux.length >= 7)  {
-            await audioPlayersMapLinux[tempCLinux_toRelease]?.release();    // LINUX SOLUTION IS a RELEASE()    NOT Dispose()   !!!   Number of Volume Regulators Stops to grow!
-          //await audioPlayersMapLinux[tempCLinux_toRelease]?.dispose();    // sound disappers after number of volume regulators overflow
-          } else {}       // Linux Solution is DISPOSE()
-          if(ntTblNtfrsList[24]['counterPlayerLinux']! < 6) {ntTblNtfrsList[24]['counterPlayerLinux'] = ntTblNtfrsList[24]['counterPlayerLinux']! + 1;} else {ntTblNtfrsList[24]['counterPlayerLinux'] = 0;}
-          ntTblNotifier.value = ntTblNtfrsList;
-          // await player.dispose();     // NO DISPOSE! Linux added  RELEASE() to delete volume Regulators (Sliders). Sounds stops Linux when Number of volume Regulators Overfilled !!!
-          // player.release();
-        break;
-      default:
-        await player.play(AssetSource('$nT_'), mode: PlayerMode.lowLatency);  // Sounds From Here, Mode for each note: lowLatency ! But Memory Leak Windows!
-        break;
-    } //end switch (playerMode)
-//
-  } // end PlaySound ()
+      case 1: xtsn_ = 'wav'; aP_ = 'assets/wav/'; break;
+      case 2: xtsn_ = 'm4a'; aP_ = 'assets/m4a/'; break;
+      case 4: xtsn_ = 'mp3'; aP_ = 'assets/mp3/'; break;
+      default: xtsn_ = 'wav'; aP_ = 'assets/wav/'; break;
+    }
+    if (tuning == 11) { tI_ = 3 - 1; aP_ = 'assets/wavn/'; }
+    if (tuning == 12) { tI_ = 4 - 1; aP_ = 'assets/wavn/'; }
+    if (tuning == 14) { tI_ = 10 - 1; aP_ = 'assets/wav/'; }
+    if (tuning == 15) { tI_ = 11 - 1; aP_ = 'assets/wav/'; }
+    String fileName = krSnd[tI_][nI_][sOl_].toString();
+    String fullPath = '$aP_$fileName.$xtsn_';
+    try {
+      AudioSource? source;
+      if (soundCache.containsKey(fullPath)) {
+        source = soundCache[fullPath];
+      } else {
+        source = await audioEngine.loadAsset(fullPath);
+        soundCache[fullPath] = source;
+      }
+      if (source != null) {
+        await audioEngine.play(source, volume: nVol);
+      }
+    } catch (e) {
+      print(e);
+    }
+  }// end PlaySound ()
 //
 //
   void harmonicFunctions (int soundNum) {                         // optional Harmonic Functions to visual Display Consonance and Dissonance
@@ -2658,7 +2607,7 @@ if (Platform.isWindows) {
   hideControlsForScreenshotModeByLongPress() {
     hideControlsForScreenshotMode = !hideControlsForScreenshotMode;
     if(hideControlsForScreenshotMode) {
-                            DesktopWindow.setWindowSize(Size(860,1600));
+                            DesktopWindow.setWindowSize(Size(800,1100));
       if(Platform.isLinux) {DesktopWindow.setWindowSize(Size(430,1600));} else {}
     } else {}
     setState(() {});
