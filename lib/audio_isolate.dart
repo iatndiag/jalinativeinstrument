@@ -43,7 +43,8 @@ double ISOtempoCoeff = 1.0;            // specify
 bool ISOcnslDelay1Ntfr = false;        // specify
 List<Map<String, bool>> ISObuttonsNotifier = [];  // specify
 //
-void playerIsolateEntryPoint (SendPort sendPortToMain) {
+void playerIsolateEntryPoint (SendPort sendPortToMain) async{
+  await SoLoud.instance.init();
   final receivePortFromMain = ReceivePort();
   sendPortToMain.send(receivePortFromMain.sendPort);
   receivePortFromMain.listen((message) async {                                                     // async is Here
@@ -80,9 +81,8 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
     } // end reCalculateMD2()
  //
  //
-    if (message is List && message.isNotEmpty) {
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-      ISOrangeStart         = message[0][0][0]['rangeStart'];                                      //  = = = = = = = = = = =  operator !!!
+    if (message is List && message.length >= 1) {
+      ISOrangeStart = message[0][0][0]['rangeStart'];                                              //  = = = = = = = = = = =  operator !!!
       ISOrangeEnd           = message[0][0][1]['rangeEnd'];                                        // It is the assignment operator that is required! It simulates an event listener
       ISOstartBit           = message[0][0][2]['startBit'];
       ISOplayingBit          = message[0][0][3]['playingBit'];
@@ -99,8 +99,8 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
       ISOonTapCollisionPrevention_3 = message[0][0][27]['onTapCollisionPrevention_3'];
       ISOiStarts          = message[1][0];
       ISOiEnds            = message[2][0]; //developer.log(ISOiEnds.toString());
-      ISOjBtnRelease      = message[3][0];
-      ISOcsvLst           = message[4][0];
+      ISOjBtnRelease      = message[3];
+      ISOcsvLst           = message[4];
       ISOnotesByBit       = message[5][0];
       ISOrngExtend        = message[6][0];
       ISOtoggleIcnMsrBtn  = message[7][0];
@@ -110,45 +110,45 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
       ISOnoteVolume        = message[11][0];
       ISOextension         = message[12][0];
       ISOcnslDelay1Ntfr    = message[13][0];
-      ISObuttonsNotifier   = message[14][0];
+      // ISObuttonsNotifier   = message[14][0];
       //
       //
-      developer.log(ISOrangeStart.toString());
+      // developer.log(ISOrangeStart.toString());
       //
       //
       void addButtonsStates(int btnNum, bool locFing) {                                        // See also SplayTreeMap (Sorted! HashMap), "Splay"!
-        //if(stringsNum==21 && btnNum==21) { btnNum = 22;} else if(stringsNum==21 && btnNum==22)  { btnNum = 21;} else {}   // remember that in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string, but in csvLst does not changed
-        if (btnNum==0)  {
-          buttonsPS.clear();
-          for (int i = 0; i < 24; i++) {        // to prevent Range error: max index is 23
-            buttonsPS.add({'prsd' : false});    // List of unsorted HashMapS (no need to Sort, it's primitive!)
-          } //end for
-          buttonsPS.add({'fngr' : false});    // for Local showFingering              24th element
-      sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
-        } else if( (stringsNum==21 && btnNum != 21) || stringsNum==22 ) {             // in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string
-          buttonsPS = ISObuttonsNotifier; // "..." !!! it is called "Spread operator"     // If you want to get previous values!
-          buttonsPS[btnNum]['prsd'] = true;
-          if (locFing==true) {buttonsPS[24]['fngr'] = true;} else {};
-      sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
-        } else {} // end if()
+      //   //if(stringsNum==21 && btnNum==21) { btnNum = 22;} else if(stringsNum==21 && btnNum==22)  { btnNum = 21;} else {}   // remember that in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string, but in csvLst does not changed
+      //   if (btnNum==0)  {
+      //     buttonsPS.clear();
+      //     for (int i = 0; i < 24; i++) {        // to prevent Range error: max index is 23
+      //       buttonsPS.add({'prsd' : false});    // List of unsorted HashMapS (no need to Sort, it's primitive!)
+      //     } //end for
+      //     buttonsPS.add({'fngr' : false});    // for Local showFingering              24th element
+      // sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
+      //   } else if( (stringsNum==21 && btnNum != 21) || stringsNum==22 ) {             // in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string
+      //     buttonsPS = ISObuttonsNotifier; // "..." !!! it is called "Spread operator"     // If you want to get previous values!
+      //     buttonsPS[btnNum]['prsd'] = true;
+      //     if (locFing==true) {buttonsPS[24]['fngr'] = true;} else {};
+      // sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
+      //   } else {} // end if()
       } // end addButtonsStates()
       void releaseButtonsStates(int btnNum) {
-        //if(stringsNum==21 && btnNum==21) { btnNum = 22;} else if(stringsNum==21 && btnNum==22)  { btnNum = 21;} else {}   // remember that in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string, but in csvLst does not changed
-        buttonsPS = ISObuttonsNotifier; // "..." !!! it is called "Spread operator"
-        if (btnNum==0)  {
-          for (int i = 0; i < 24; i++) {
-            buttonsPS[i]['prsd'] = false;
-          } //end for
-          buttonsPS[24]['fngr'] = false;
-      sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
-        } else if( (stringsNum==21 && btnNum != 21) || stringsNum==22 ) {             // in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string
-          buttonsPS[btnNum]['prsd'] = false;
-          buttonsPS[24]['fngr'] = false;
-      sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
-        } else {} // end if()
+      //   //if(stringsNum==21 && btnNum==21) { btnNum = 22;} else if(stringsNum==21 && btnNum==22)  { btnNum = 21;} else {}   // remember that in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string, but in csvLst does not changed
+      //   buttonsPS = ISObuttonsNotifier; // "..." !!! it is called "Spread operator"
+      //   if (btnNum==0)  {
+      //     for (int i = 0; i < 24; i++) {
+      //       buttonsPS[i]['prsd'] = false;
+      //     } //end for
+      //     buttonsPS[24]['fngr'] = false;
+      // sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
+      //   } else if( (stringsNum==21 && btnNum != 21) || stringsNum==22 ) {             // in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string
+      //     buttonsPS[btnNum]['prsd'] = false;
+      //     buttonsPS[24]['fngr'] = false;
+      // sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
+      //   } else {} // end if()
       } // end releaseButtonsStates()
-      //
-      //
+//       //
+//       //
       changeTableView(i,iStarts,dontChangeView) {  //changes view Only in UP direction, by "i"
         sendPortToMain.send('onTapCollisionPrevention_1:' + 1.toString());
         sendPortToMain.send('SETNOTIFIERREQUEST');
@@ -269,10 +269,10 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
         sendPortToMain.send('onTapCollisionPrevention_1:' + 0.toString());
         sendPortToMain.send('SETNOTIFIERREQUEST');
       } // end changeTableView()
-//
-//
-//
-//
+// //
+// //
+// //
+// //
       Future<void> playSound(int tuning, int number, int shortOrLong, double nVol, int ext) async {
         if (!audioEngine.isInitialized) {
           await audioEngine.init();
@@ -309,13 +309,13 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
           print(e);
         }
       }
-//
-//
-      //
-      //
-      //
-      //
-      //
+// //
+// //
+//       //
+//       //
+//       //
+//       //
+//       //
         //**********************************************************************//
         var PBIT   = ISOplayingBit!;
         var TCC    = ISOtableChangeCount!;
@@ -336,9 +336,9 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
         // Android: first ~3 measures after first file load - playback accelerates, then slows down,
         // Windows: in background - playback accelerates (when result of widget rebuild is not visible)
         // Conclusion: needs speed correction, SLOWDOWN (!), so used stopwatch steps 1-3:
-        Stopwatch stopwatch;  // measure execution duration in between lines of code 1 of 2
-        // print('Elapse Start: ${stopwatch.elapsed}'); // works fine
-        ////////////////////////////////////////////////// End Stopwatch 1 of 2 ////////////////////////////////////////
+       // // Stopwatch stopwatch;  // measure execution duration in between lines of code 1 of 2
+        // // print('Elapse Start: ${stopwatch.elapsed}'); // works fine
+      //   ////////////////////////////////////////////////// End Stopwatch 1 of 2 ////////////////////////////////////////
         bool dontChangeView = true;     // don't change Current Page View with Current Numbers of Measures
       sendPortToMain.send('GETNOTIFIERREQUEST');
         ///////////////////////////////////     // toDo: issue: measure toggle
@@ -353,17 +353,17 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
       sendPortToMain.send('SETSTATE');
         } else {}
         ///////////////////////////////////
-        if (ISOiEnds > csvLst.length) {ISOiEnds = csvLst.length - 0;} else {} // end if toDo: (prevention of grey screen) when List Naturally Ended
+        if (ISOiEnds > ISOcsvLst.length) {ISOiEnds = ISOcsvLst.length - 0;} else {} // end if toDo: (prevention of grey screen) when List Naturally Ended
         //print(ISOiEnds);print(wasTSVextDetected);
         //--------------------------------------- Main Cycle Loops Begin ---------------------------------------//
-        outerloop:                // NOT Used    try to break for-loop by label and keyword "break outerloop;"   No very good idea!
+        // outerloop:                // NOT Used    try to break for-loop by label and keyword "break outerloop;"   No very good idea!
         for (int i = ISOiStarts; i < ISOiEnds; i++) { // traversing a list from start to finish //"mS" could be changed at any time by Slider
           //
-          var sw = Stopwatch()..start();
-          while((ISOonTapCollisionPrevention_1 == 1 || ISOonTapCollisionPrevention_2 == 1 || ISOonTapCollisionPrevention_3 == 1)  && sw.elapsedMilliseconds < 625)
-          {
-            // NO ENDLESS LOOP !!!  2 SECONDS
-          }
+// var sw = Stopwatch()..start();
+//           while((ISOonTapCollisionPrevention_1 == 1 || ISOonTapCollisionPrevention_2 == 1 || ISOonTapCollisionPrevention_3 == 1)  && sw.elapsedMilliseconds < 625)
+//           {
+//             // NO ENDLESS LOOP !!!  2 SECONDS
+//           }
           //
       sendPortToMain.send('GETNOTIFIERREQUEST');
           TCC    = ISOtableChangeCount!;    // try to fix incorrect view change after bothTables onTap
@@ -373,8 +373,8 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
        sendPortToMain.send('SETSTATE');
           } else {};      // show suggest to move to the left handle of the range slider to start from the beginning // fix rSTART==0  arrow Move Left appears at the middle Left Handle position
           ////////// Stopwatch (part 2 of 3)///////////
-          stopwatch = Stopwatch()..start();
-          stopwatch.reset();
+//           stopwatch = Stopwatch()..start();
+//         stopwatch.reset();
           //print('Elapse Start: ${stopwatch.elapsed}');
           /////////// End Stopwatch (part 2 of 3)//////
           //
@@ -382,7 +382,6 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) {
           PBIT       = i;  // animation of cursor move
           ISOplayingBit = PBIT;
 sendPortToMain.send('playingBit' + ISOplayingBit.toString());
-          developer.log(ISOplayingBit.toString());
        sendPortToMain.send('SETNOTIFIERREQUEST');        // instead of previous value attach
           /////////////// End Animation of Cursor Move
           //
@@ -450,12 +449,12 @@ sendPortToMain.send('playingBit' + ISOplayingBit.toString());
           //////////////////////////////////////////////////////////////////////////////
           //////////////////////////// Current Bit Traversal by "j", PlayingNotes ////////////////////////////////
           for (int j = 1; j <= ISOnotesByBit; j++) {     // (j) is number of playing string at the moment, and  shortOrLong - is variant of note's length // <=   <=   <=  less or equal
-            if (csvLst[i][j] != "") {                 // for simple Lists Use "add" method!!          // ISOshortOrLongNum = 1 or 2 (Long|Short)  // You not to have to escape "asterisk", or "\" an "raw"
-              if (csvLst[i][j].toString().contains("*")) {ISOshortOrLongNum = 2; ISOjBtnRelease.add(j);} else {} // note with (*) is a Short Note, sounds faster //LONG NOTES NOT WORKED BY THE REASON OF LIST.FROM data1, inherit changed it's parent!!! You not to have to escape symbol '\' or use a raw string
+            if (ISOcsvLst[i][j] != "") {                 // for simple Lists Use "add" method!!          // ISOshortOrLongNum = 1 or 2 (Long|Short)  // You not to have to escape "asterisk", or "\" an "raw"
+              if (ISOcsvLst[i][j].toString().contains("*")) {ISOshortOrLongNum = 2; ISOjBtnRelease.add(j);} else {} // note with (*) is a Short Note, sounds faster //LONG NOTES NOT WORKED BY THE REASON OF LIST.FROM data1, inherit changed it's parent!!! You not to have to escape symbol '\' or use a raw string
 playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextension);  // sounds from here !
-              if(ntTblNtfrsList[5]['msrTgl'] == 0) {noteVolume = noteVolumeBack;} else {}   //restoring normal Vol    // to (ISOiEnds - 1) note will not hear    2 of 2
+              if(ISOmsrTgl == 0) {noteVolume = noteVolumeBack;} else {}   //restoring normal Vol    // to (ISOiEnds - 1) note will not hear    2 of 2
               ISOshortOrLongNum = 1; // resetting to Long ones !!!
-              if((csvLst[i][j].toString().contains("i") && showFingeringOnButtons[j] == 0) || (csvLst[i][j].toString().contains("t") && showFingeringOnButtons[j] == 1)) {
+              if((ISOcsvLst[i][j].toString().contains("i") && showFingeringOnButtons[j] == 0) || (ISOcsvLst[i][j].toString().contains("t") && showFingeringOnButtons[j] == 1)) {
                 showLocalFinger=true;    // if notation contains "index finger" and by default rule this string played not by Index
               } else {
                 showLocalFinger=false;   // if notation contains "thumb finger" and by default rule this string played not by Thumb
@@ -464,11 +463,11 @@ playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextensio
             }  // will be hear async parallel simultaneously sounds notes by one bit and aftertones of previous bits notes
           } // ind for (j)
           //////////////////////////// End Current Bit Traversal by "j", PlayingNotes ////////////////////////////
-          var sw1 = Stopwatch()..start();
-          while((ISOonTapCollisionPrevention_1 == 1 || ISOonTapCollisionPrevention_2 == 1 || ISOonTapCollisionPrevention_3 == 1)  && sw1.elapsedMilliseconds < 625)
-          {
-            // NO ENDLESS LOOP !!!  2 SECONDS
-          }
+// var sw1 = Stopwatch()..start();
+//           while((ISOonTapCollisionPrevention_1 == 1 || ISOonTapCollisionPrevention_2 == 1 || ISOonTapCollisionPrevention_3 == 1)  && sw1.elapsedMilliseconds < 625)
+//           {
+//             // NO ENDLESS LOOP !!!  2 SECONDS
+//           }
       sendPortToMain.send('GETNOTIFIERREQUEST');
           if(ISOonTapCollisionPrevention_1 == 0 && ISOonTapCollisionPrevention_2 == 0 && ISOonTapCollisionPrevention_3 == 0) {
             if (shouldChangeView == true) {
@@ -481,7 +480,7 @@ playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextensio
             ISOiEnds = maxLength;
             // if TSV, prevention of ISOiEnds range error at the end of playback (2 of 2):
             if(wasTSVextDetected==true || googleCSVdetected==true) { // ??? TSV needs minus one element at the end (this is the difference from CSV):
-              ISOiEnds = csvLst.length - 0;
+              ISOiEnds = ISOcsvLst.length - 0;
             } else {
             } //end if TSV was detected
           } else {}; //end if
@@ -555,9 +554,9 @@ playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextensio
           //
           //// Extra Delay (especially relevant: to Android - ONLY at App launch and first file load - it is accelerating, so, it needs to some slowDown):
           //// toDo: There was a very significant smoothness, it's very good:
-          if(stopwatch.elapsedMilliseconds < 100) {   // < 100 mS clean code execution time
-            for (int u = 0; u < 6; u++) {await Future.delayed(reCalculateMD());} // end for(u)
-          } else {} //end if
+      // if(stopwatch.elapsedMilliseconds < 100) {   // < 100 mS clean code execution time
+      //   for (int u = 0; u < 6; u++) {await Future.delayed(reCalculateMD());} // end for(u)
+      // } else {} //end if
           //
           //
           ///////////////////////////////////////////// End Stopwatch 3 of 3 ////////////////////////////////////////////////
@@ -570,7 +569,7 @@ playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextensio
       sendPortToMain.send('SETSTATE');
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     }
-  });
+   });
 } //end IsolateEntryPoint
 //
 //
