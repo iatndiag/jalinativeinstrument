@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'package:flutter/services.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'dart:developer' as developer;   //  usage:  developer.log(message.toString());
 import 'dart:isolate';
@@ -43,10 +45,14 @@ double ISOtempoCoeff = 1.0;            // specify
 bool ISOcnslDelay1Ntfr = false;        // specify
 List<Map<String, bool>> ISObuttonsNotifier = [];  // specify
 //
-void playerIsolateEntryPoint (SendPort sendPortToMain) async{
+// void playerIsolateEntryPoint (SendPort sendPortToMain) async{
+   void playerIsolateEntryPoint(({SendPort sendPort, RootIsolateToken token}) data) async {
+  BackgroundIsolateBinaryMessenger.ensureInitialized(data.token);
+  await Future.delayed(const Duration(milliseconds: 50));
   await SoLoud.instance.init();
   final receivePortFromMain = ReceivePort();
-  sendPortToMain.send(receivePortFromMain.sendPort);
+  data.sendPort.send(receivePortFromMain.sendPort);
+ // data.sendPort.send(receivePortFromMain.sendPort);
   receivePortFromMain.listen((message) async {                                                     // async is Here
  //
  //
@@ -124,12 +130,12 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{
       //       buttonsPS.add({'prsd' : false});    // List of unsorted HashMapS (no need to Sort, it's primitive!)
       //     } //end for
       //     buttonsPS.add({'fngr' : false});    // for Local showFingering              24th element
-      // sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
+      // data.sendPort.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
       //   } else if( (stringsNum==21 && btnNum != 21) || stringsNum==22 ) {             // in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string
       //     buttonsPS = ISObuttonsNotifier; // "..." !!! it is called "Spread operator"     // If you want to get previous values!
       //     buttonsPS[btnNum]['prsd'] = true;
       //     if (locFing==true) {buttonsPS[24]['fngr'] = true;} else {};
-      // sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
+      // data.sendPort.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
       //   } else {} // end if()
       } // end addButtonsStates()
       void releaseButtonsStates(int btnNum) {
@@ -140,20 +146,20 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{
       //       buttonsPS[i]['prsd'] = false;
       //     } //end for
       //     buttonsPS[24]['fngr'] = false;
-      // sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
+      // data.sendPort.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
       //   } else if( (stringsNum==21 && btnNum != 21) || stringsNum==22 ) {             // in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string
       //     buttonsPS[btnNum]['prsd'] = false;
       //     buttonsPS[24]['fngr'] = false;
-      // sendPortToMain.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
+      // data.sendPort.send('SETBUTTONSNOTIFIERREQUEST');  // here List attached to Notifier
       //   } else {} // end if()
       } // end releaseButtonsStates()
 //       //
 //       //
       changeTableView(i,iStarts,dontChangeView) {  //changes view Only in UP direction, by "i"
-        sendPortToMain.send('onTapCollisionPrevention_1:' + 1.toString());
-        sendPortToMain.send('SETNOTIFIERREQUEST');
+        data.sendPort.send('onTapCollisionPrevention_1:' + 1.toString());
+        data.sendPort.send('SETNOTIFIERREQUEST');
         //**********************************************************************//  "Assembler-style" variables names:
-        sendPortToMain.send('GETNOTIFIERREQUEST');
+        data.sendPort.send('GETNOTIFIERREQUEST');
         var TCC128 = ISOtableChangeCount128!;
         var TCC064 = ISOtableChangeCount64!;
         var TCC032 = ISOtableChangeCount32!;
@@ -253,21 +259,21 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{
 //
 //
 //**********************************************************************//
-        sendPortToMain.send('tableChangeCount128:' + TCC128.toString());
-        sendPortToMain.send('tableChangeCount64:' + TCC064.toString());
-        sendPortToMain.send('tableChangeCount32:' + TCC032.toString());
-        sendPortToMain.send('playingBit:' + PBIT.toString());
-        sendPortToMain.send('startBit:' + SBIT.toString());
-        sendPortToMain.send('tableChangeCount:' + TCC.toString());
-        sendPortToMain.send('rangeStart:' + rSTART.toString());
-        sendPortToMain.send('rangeEnd:' + rEND.toString());
+        data.sendPort.send('tableChangeCount128:' + TCC128.toString());
+        data.sendPort.send('tableChangeCount64:' + TCC064.toString());
+        data.sendPort.send('tableChangeCount32:' + TCC032.toString());
+        data.sendPort.send('playingBit:' + PBIT.toString());
+        data.sendPort.send('startBit:' + SBIT.toString());
+        data.sendPort.send('tableChangeCount:' + TCC.toString());
+        data.sendPort.send('rangeStart:' + rSTART.toString());
+        data.sendPort.send('rangeEnd:' + rEND.toString());
         ////////////////////////////
-        sendPortToMain.send('SETNOTIFIERREQUEST');     // without setState()
+        data.sendPort.send('SETNOTIFIERREQUEST');     // without setState()
         ////////////////////////////
 //**********************************************************************//
 //
-        sendPortToMain.send('onTapCollisionPrevention_1:' + 0.toString());
-        sendPortToMain.send('SETNOTIFIERREQUEST');
+        data.sendPort.send('onTapCollisionPrevention_1:' + 0.toString());
+        data.sendPort.send('SETNOTIFIERREQUEST');
       } // end changeTableView()
 // //
 // //
@@ -324,10 +330,10 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{
         var rSTART = ISOrangeStart!;
         var rEND = ISOrangeEnd!;
         //**********************************************************************//
-      sendPortToMain.send('oneTraversingInstanceLaunched:true');            // prevention of double- or multi- starts
-      sendPortToMain.send('showArrowMoveToTheLeft:false');                  // hide Arrow "Move Left"
-      sendPortToMain.send('showVerticalBigLables:false');                   // hide
-      sendPortToMain.send('SETSTATE');
+      data.sendPort.send('oneTraversingInstanceLaunched:true');            // prevention of double- or multi- starts
+      data.sendPort.send('showArrowMoveToTheLeft:false');                  // hide Arrow "Move Left"
+      data.sendPort.send('showVerticalBigLables:false');                   // hide
+      data.sendPort.send('SETSTATE');
         bool showLocalFinger = false;
         int iEndsTmp;                                             // for dynamical shortening or extending range by slider
         bool shouldChangeView = true;                             // to not increase TCC when stopped by user
@@ -340,17 +346,17 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{
         // // print('Elapse Start: ${stopwatch.elapsed}'); // works fine
       //   ////////////////////////////////////////////////// End Stopwatch 1 of 2 ////////////////////////////////////////
         bool dontChangeView = true;     // don't change Current Page View with Current Numbers of Measures
-      sendPortToMain.send('GETNOTIFIERREQUEST');
+      data.sendPort.send('GETNOTIFIERREQUEST');
         ///////////////////////////////////     // toDo: issue: measure toggle
         // range Extends: if range was already set and now it extends by user using range slider
         if (ISOrngExtend == true) {
           PBIT = ISOiStarts;
-      sendPortToMain.send('msrTgl:1');
-      sendPortToMain.send('SETNOTIFIERREQUEST');
+      data.sendPort.send('msrTgl:1');
+      data.sendPort.send('SETNOTIFIERREQUEST');
           ISOplayingBit = PBIT;
-      sendPortToMain.send('GETNOTIFIERREQUEST');
-      sendPortToMain.send('toggleIcnMsrBtn:false');
-      sendPortToMain.send('SETSTATE');
+      data.sendPort.send('GETNOTIFIERREQUEST');
+      data.sendPort.send('toggleIcnMsrBtn:false');
+      data.sendPort.send('SETSTATE');
         } else {}
         ///////////////////////////////////
         if (ISOiEnds > ISOcsvLst.length) {ISOiEnds = ISOcsvLst.length - 0;} else {} // end if toDo: (prevention of grey screen) when List Naturally Ended
@@ -365,12 +371,12 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{
 //             // NO ENDLESS LOOP !!!  2 SECONDS
 //           }
           //
-      sendPortToMain.send('GETNOTIFIERREQUEST');
+      data.sendPort.send('GETNOTIFIERREQUEST');
           TCC    = ISOtableChangeCount!;    // try to fix incorrect view change after bothTables onTap
           if(TCC == 1) {iEndsTmp = ((ISOrangeEnd!)/2).round() + 0;} else {iEndsTmp = ((ISOrangeEnd!)/2).round() + 0 + (TCC - 1) * (ISOnTcolS!*2);}  // use listenable value ISOrangeEnd!
           if((i==ISOiEnds-1) && OisLEFT == 0 && OisRIGHT == 0 && rSTART==0 && TCC > 1) {
-       sendPortToMain.send('showArrowMoveToTheLeft:true');
-       sendPortToMain.send('SETSTATE');
+       data.sendPort.send('showArrowMoveToTheLeft:true');
+       data.sendPort.send('SETSTATE');
           } else {};      // show suggest to move to the left handle of the range slider to start from the beginning // fix rSTART==0  arrow Move Left appears at the middle Left Handle position
           ////////// Stopwatch (part 2 of 3)///////////
 //           stopwatch = Stopwatch()..start();
@@ -381,28 +387,28 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{
           /////////////// Animation of Cursor Move
           PBIT       = i;  // animation of cursor move
           ISOplayingBit = PBIT;
-sendPortToMain.send('playingBit' + ISOplayingBit.toString());
-       sendPortToMain.send('SETNOTIFIERREQUEST');        // instead of previous value attach
+data.sendPort.send('playingBit' + ISOplayingBit.toString());
+       data.sendPort.send('SETNOTIFIERREQUEST');        // instead of previous value attach
           /////////////// End Animation of Cursor Move
           //
           //
           // if range slider became All the way to the left and All the way to the right, then:
           if (OisLEFT == 0 && OisRIGHT == 0 && fromTheBegin == true) { // restore cursor position when range released by user
-       sendPortToMain.send('fromTheBegin:false');    // will not start from the begin of the List
-       sendPortToMain.send('SETSTATE');
+       data.sendPort.send('fromTheBegin:false');    // will not start from the begin of the List
+       data.sendPort.send('SETSTATE');
           } else {} // end if
           //
           //////////////////////////////////////////////////////////////////// // range WAS all the way to the left and right (not set), and NOW it changed by user, then Stop:
           if((OisLEFT==0 && ISOrangeStart?.round().remainder(ISOnTcolS!*2) != 0) || (OisRIGHT==0 && ISOrangeEnd?.round().remainder(ISOnTcolS!*4) != 0)) {
-       sendPortToMain.send('toggleIcnMsrBtn:true');
-       sendPortToMain.send('SETSTATE');
-       sendPortToMain.send('GETNOTIFIERREQUEST');
-       sendPortToMain.send('msrTgl:0');
-       sendPortToMain.send('SETNOTIFIERREQUEST');
-       sendPortToMain.send('GETNOTIFIERREQUEST');
-       sendPortToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
-       sendPortToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
-       sendPortToMain.send('SETSTATE');
+       data.sendPort.send('toggleIcnMsrBtn:true');
+       data.sendPort.send('SETSTATE');
+       data.sendPort.send('GETNOTIFIERREQUEST');
+       data.sendPort.send('msrTgl:0');
+       data.sendPort.send('SETNOTIFIERREQUEST');
+       data.sendPort.send('GETNOTIFIERREQUEST');
+       data.sendPort.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
+       data.sendPort.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
+       data.sendPort.send('SETSTATE');
           }
           else {}
           ////////////////////////////////////////////////////////////////////
@@ -417,26 +423,26 @@ sendPortToMain.send('playingBit' + ISOplayingBit.toString());
               ntTblNtfrsList[2]['startBit']         = 0;
               ISOplayingBit       = 0;
         ISOtableChangeCount = 1;
-        sendPortToMain.send('msrTgl:0');
-        sendPortToMain.send('tableChangeCount32:1');
-        sendPortToMain.send('tableChangeCount64:1');
-        sendPortToMain.send('tableChangeCount128:1');
-         sendPortToMain.send('SETNOTIFIERREQUEST');
+        data.sendPort.send('msrTgl:0');
+        data.sendPort.send('tableChangeCount32:1');
+        data.sendPort.send('tableChangeCount64:1');
+        data.sendPort.send('tableChangeCount128:1');
+         data.sendPort.send('SETNOTIFIERREQUEST');
             } else {
               i = ISOiEnds - 1; // exit from cycle = release, stop
               //break outerloop;  // was: i = ISOiEnds - 1;    // try to break outerloop by label
               //                                               // So that there is no empty space at the cursor position after stopping:
               ISOplayingBit       = maxLength;
-         sendPortToMain.send('SETNOTIFIERREQUEST');
+         data.sendPort.send('SETNOTIFIERREQUEST');
               //
             } // end if (start from the begin)
-        sendPortToMain.send('toggleIcnMsrBtn:true');
-        sendPortToMain.send('oneTraversingInstanceLaunched:false');
-        sendPortToMain.send('SETSTATE');
-        sendPortToMain.send('GETNOTIFIERREQUEST');
-        sendPortToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
-        sendPortToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
-        sendPortToMain.send('SETSTATE');
+        data.sendPort.send('toggleIcnMsrBtn:true');
+        data.sendPort.send('oneTraversingInstanceLaunched:false');
+        data.sendPort.send('SETSTATE');
+        data.sendPort.send('GETNOTIFIERREQUEST');
+        data.sendPort.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
+        data.sendPort.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
+        data.sendPort.send('SETSTATE');
           } else {} // end exiting cycle (stop play), measure button pressed by user
           /////////////////////////////////////////////////////////////////////////////////////////
           ///////////////////////////////////////////////////////////////////////////////
@@ -444,7 +450,7 @@ sendPortToMain.send('playingBit' + ISOplayingBit.toString());
           if ((iEndsTmp <= PBIT && (OisLEFT != 0 || OisRIGHT != 0))) {  // if range dynamically changed by user
             i = ISOiEnds - 1;    // exit from cycle = release, stop
             // break outerloop;  // was: i = ISOiEnds - 1;    // try to break outerloop by label
-        sendPortToMain.send('SETSTATE');
+        data.sendPort.send('SETSTATE');
           } else {} // end if
           //////////////////////////////////////////////////////////////////////////////
           //////////////////////////// Current Bit Traversal by "j", PlayingNotes ////////////////////////////////
@@ -468,7 +474,7 @@ playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextensio
 //           {
 //             // NO ENDLESS LOOP !!!  2 SECONDS
 //           }
-      sendPortToMain.send('GETNOTIFIERREQUEST');
+      data.sendPort.send('GETNOTIFIERREQUEST');
           if(ISOonTapCollisionPrevention_1 == 0 && ISOonTapCollisionPrevention_2 == 0 && ISOonTapCollisionPrevention_3 == 0) {
             if (shouldChangeView == true) {
               await changeTableView(i, ISOiStarts, dontChangeView);  // await added!
@@ -524,30 +530,30 @@ playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextensio
           if (i == ISOiEnds - 1) {      // completion naturally upon reaching ISOiEnds OR at the end of the List
             shouldChangeView = false;
             // print('ends naturally');
-        sendPortToMain.send('GETNOTIFIERREQUEST');
+        data.sendPort.send('GETNOTIFIERREQUEST');
             if(fromTheBegin) {
               ntTblNtfrsList[2]['startBit']         = 0;
               ISOplayingBit       = 0;
               ISOtableChangeCount = 1;
-        sendPortToMain.send('msrTgl:0');
-        sendPortToMain.send('tableChangeCount32:1');
-        sendPortToMain.send('tableChangeCount64:1');
-        sendPortToMain.send('tableChangeCount128:1');
+        data.sendPort.send('msrTgl:0');
+        data.sendPort.send('tableChangeCount32:1');
+        data.sendPort.send('tableChangeCount64:1');
+        data.sendPort.send('tableChangeCount128:1');
             } else {                          // completion naturally at the end of the selected Range
-        sendPortToMain.send('msrTgl:0');
+        data.sendPort.send('msrTgl:0');
               //                           // So that there is no empty space at the cursor position after stopping:
               ISOplayingBit       = maxLength;
-        sendPortToMain.send('SETNOTIFIERREQUEST');
+        data.sendPort.send('SETNOTIFIERREQUEST');
               //
             } //end if(start from the begin)
-        sendPortToMain.send('toggleIcnMsrBtn:true');
-        sendPortToMain.send('oneTraversingInstanceLaunched:false');
-        sendPortToMain.send('SETSTATE');
-        sendPortToMain.send('SETNOTIFIERREQUEST');
-        sendPortToMain.send('GETNOTIFIERREQUEST');
-        sendPortToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
-        sendPortToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
-        sendPortToMain.send('SETSTATE');
+        data.sendPort.send('toggleIcnMsrBtn:true');
+        data.sendPort.send('oneTraversingInstanceLaunched:false');
+        data.sendPort.send('SETSTATE');
+        data.sendPort.send('SETNOTIFIERREQUEST');
+        data.sendPort.send('GETNOTIFIERREQUEST');
+        data.sendPort.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
+        data.sendPort.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
+        data.sendPort.send('SETSTATE');
           } // end if(): setting Icon on Measure Button to "Play" (default)
           /////////////////// End Completion naturally /////////////////////
           //
@@ -561,12 +567,12 @@ playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextensio
           //
           ///////////////////////////////////////////// End Stopwatch 3 of 3 ////////////////////////////////////////////////
         //await setDataSharedPref();   // CALL
-      sendPortToMain.send('setDataSharedPref');
+      data.sendPort.send('setDataSharedPref');
         } // end for (i)                                        // "oneTraversingInstanceLaunched" is a Double-start prevention
         //await checkIfTCCareOutOfLimits();  // if previous session ends incorrectly or table change view ends incorrectly
-      sendPortToMain.send('checkIfTCCareOutOfLimits');
-      sendPortToMain.send('oneTraversingInstanceLaunched:false');  // after additional list traversal it could be "true", so setting it to "false" at the end
-      sendPortToMain.send('SETSTATE');
+      data.sendPort.send('checkIfTCCareOutOfLimits');
+      data.sendPort.send('oneTraversingInstanceLaunched:false');  // after additional list traversal it could be "true", so setting it to "false" at the end
+      data.sendPort.send('SETSTATE');
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     }
    });
