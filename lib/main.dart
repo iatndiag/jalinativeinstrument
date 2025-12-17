@@ -109,15 +109,51 @@ import 'package:http/http.dart' as http;    //flutter pub add http
 // import removed, you can find it any time by this link
 //
 //
-final SoLoud audioEngine = SoLoud.instance;
-Map<String, AudioSource> soundCache = {};
+// final SoLoud audioEngine = SoLoud.instance;  // works fine in this main Isolate
+// Map<String, AudioSource> soundCache = {};
 //
 //void main() {                                            // was without command line arguments               Adnroid
-late RootIsolateToken globalIsolateToken;
+// late RootIsolateToken globalIsolateToken;
+//
+//
+Map<String, String> cachedFilesPaths = {};
+Future<void> unpackAssetsToTemp(List krSnd) async {
+  final dir = await getTemporaryDirectory();
+  final sub = ['wav', 'wavn', 'mp3', 'm4a'];
+  for (var typ in sub) {
+    final tdr = Directory('${dir.path}/assets/$typ');
+    if (!await tdr.exists()) await tdr.create(recursive: true);
+  }
+  for (var tix = 0; tix < krSnd.length; tix++) {
+    for (var nix = 0; nix < krSnd[tix].length; nix++) {
+      for (var six = 0; six < krSnd[tix][nix].length; six++) {
+        final nam = krSnd[tix][nix][six].toString();
+        if (nam == 'null' || nam.isEmpty) continue;
+        for (var ext in ['wav', 'mp3', 'm4a']) {
+          final pth = 'assets/$ext/$nam.$ext';
+          final tpf = File('${dir.path}/$pth');
+          if (!await tpf.exists()) {
+            try {
+              final bts = await rootBundle.load(pth);
+              await tpf.writeAsBytes(bts.buffer.asUint8List());
+              cachedFilesPaths[pth] = tpf.path;
+              developer.log(pth.toString());
+            } catch (_) {}
+          } else {
+            cachedFilesPaths[pth] = tpf.path;
+          }
+        }
+      }
+    }
+  }
+}
+//
+//
 void main(List<String> arguments) async{                        // with List of Win exe command line arguments  Windows
-  WidgetsFlutterBinding.ensureInitialized();
-  await Future.delayed(const Duration(milliseconds: 100));
-  globalIsolateToken = RootIsolateToken.instance!;
+   WidgetsFlutterBinding.ensureInitialized();
+   await unpackAssetsToTemp(krSnd);
+  // await Future.delayed(const Duration(milliseconds: 100));
+  // globalIsolateToken = RootIsolateToken.instance!;
   // await SoLoud.instance.init();
   if (arguments.isNotEmpty) {argument0 = arguments[0].replaceAll('\\', '/');} else {}  // replace all \-slashes to /-slashes in Path   Windows
   //***********************************************************      Conditional Target Platform !!! Blank Screen Android!!! Blank Screen Windows!!!! (but Process Runs!)
@@ -1747,12 +1783,20 @@ if (Platform.isWindows) {
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
   void _setupPlayerIsolate(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
     WidgetsFlutterBinding.ensureInitialized();
-    await Future.microtask(() {});
-    final token = RootIsolateToken.instance!;
+    // await Future.microtask(() {});
+    // final token = RootIsolateToken.instance!;
     // developer.log(csvLst.toString());
 /////// SEND INITIAL DATA, add New Data Here:
 //     List<List<dynamic>> allData = [[ntTblNtfrsList], [iStarts], [iEnds], jBtnRelease, csvLst, [notesByBit], [rngExtend], [toggleIcnMsrBtn],
 //       [fromTheBegin], [shortOrLongNum], [selectedtuningNum], [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]];
+//     List<List<dynamic>> allData = [
+//       [ntTblNtfrsList], [iStarts], [iEnds],
+//       jBtnRelease is List ? jBtnRelease : [],
+//       csvLst is List ? csvLst : [],
+//       [notesByBit], [rngExtend], [toggleIcnMsrBtn],
+//       [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
+//       [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value], [cachedFilesPaths]
+//     ];
     List<List<dynamic>> allData = [
       [ntTblNtfrsList], [iStarts], [iEnds],
       jBtnRelease is List ? jBtnRelease : [],
@@ -1762,13 +1806,12 @@ if (Platform.isWindows) {
       [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]
     ];
 
-
 ///////
 // developer.log(allData.toString());
 // List<List<dynamic>> allData = [[notesByBit], [rngExtend]];
     _receivePortFromPlayer = ReceivePort();
-    // _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, _receivePortFromPlayer!.sendPort);
-    _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, (sendPort: _receivePortFromPlayer!.sendPort, token: token));
+    _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, _receivePortFromPlayer!.sendPort);
+    // _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, (sendPort: _receivePortFromPlayer!.sendPort, token: token));
     void _sendDataToPlayer(allData) {
       if (_sendPortToPlayer != null && allData is List && allData.isNotEmpty) {
         _sendPortToPlayer!.send(allData);
@@ -1777,9 +1820,13 @@ if (Platform.isWindows) {
         // developer.log("Error: _sendPortToPlayer is null.");
       }
     }
-    _receivePortFromPlayer!.listen((message) {
+    _receivePortFromPlayer!.listen((message) async{
    // if (message is SendPort) {_sendPortToPlayer = message;_sendDataToPlayer(allData);developer.log("main_isolate: Port received. Ready to send data.");}
-      if (message is SendPort) {_sendPortToPlayer = message;_sendDataToPlayer(allData);}
+      if (message is SendPort) {
+        _sendPortToPlayer = message;_sendDataToPlayer(allData);
+        final token = RootIsolateToken.instance!;
+        _sendPortToPlayer!.send(token);
+      }
    //
       if (message is String) {
         final parts = message.split(':');
@@ -2789,75 +2836,80 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                         Stack(
                           alignment: Alignment.center,      // is Solution how to Align center, do not need to change base point of CustomPainter or it's width
                           children: <Widget>[
-                            Column (
-                              children: [
-                                if (buildKeysNotesOrFreqsMode==1) ...[
-                                  size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                  Align(
-                                    alignment: Alignment.center,
-                                    child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+2),),
-                                  )
-                                      :                                                  // if -||-  > 1280 px
-                                  Align(
-                                    alignment: Alignment.center,
-                                    child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+6),),
-                                  ),
-                                ] else if (buildKeysNotesOrFreqsMode==2) ...[
-                                  size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                  Align(
-                                    alignment: Alignment.center,
-                                    child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+5),),
-                                  )
-                                      :                                                  // if -||-  > 1280 px
-                                  Align(
-                                    alignment: Alignment.center,
-                                    child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+6),),
-                                  ),
-                                ] else if (buildKeysNotesOrFreqsMode==3) ...[
-                                  size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                  Align(
-                                    alignment: Alignment.center,
-                                    child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
-                                  )
-                                      :                                                  // if -||-  > 1280 px
-                                  Align(
-                                    alignment: Alignment.center,
-                                    child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
-                                  ),
-                                ] else if (buildKeysNotesOrFreqsMode==4) ...[
-                                  size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                  Align(
-                                    alignment: Alignment.center,
-                                    child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
-                                  )
-                                      :                                                  // if -||-  > 1280 px
-                                  Align(
-                                    alignment: Alignment.center,
-                                    child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
-                                  ),
-                                ] else ...[
-                                  size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey),),
-                                  )
-                                      :                                              // if -||-  > 1280 px
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey),),
-                                  ),
-                                  size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize),),
-                                  )
-                                      :                                              // if -||-  > 1280 px
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize),),
-                                  ),
+                            OverflowBox(
+                              maxHeight: double.infinity,
+                              alignment: Alignment.center,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (buildKeysNotesOrFreqsMode==1) ...[
+                                    size.width < pxlsWidth ?
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+2),),
+                                    )
+                                        :
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+6),),
+                                    ),
+                                  ] else if (buildKeysNotesOrFreqsMode==2) ...[
+                                    size.width < pxlsWidth ?
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+5),),
+                                    )
+                                        :
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+6),),
+                                    ),
+                                  ] else if (buildKeysNotesOrFreqsMode==3) ...[
+                                    size.width < pxlsWidth ?
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
+                                    )
+                                        :
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
+                                    ),
+                                  ] else if (buildKeysNotesOrFreqsMode==4) ...[
+                                    size.width < pxlsWidth ?
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
+                                    )
+                                        :
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
+                                    ),
+                                  ] else ...[
+                                    size.width < pxlsWidth ?
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey),),
+                                    )
+                                        :
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey),),
+                                    ),
+                                    size.width < pxlsWidth ?
+                                    Align(
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize),),
+                                    )
+                                        :
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize),),
+                                    ),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                             ///////////////  Fingering:
                             if (((soundNum!=0 && stringsNum==21) || ((soundNum!=0 && soundNum!=21) && stringsNum==22)) && buildKeysNotesOrFreqsMode==5 && showFingeringOnButtons[soundNum] == 1) ...[      // 1 = Index finger (right or left - by context)
@@ -2934,14 +2986,20 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
             },
             icon:  Icon(Jaliinstrument.info, color: themeappLightDark==1 ? Colors.orange : invertCustom(Colors.orange)),
             label:
-            Column (
-              children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text('info', style: TextStyle(fontSize: fontSize_i, color: themeappLightDark==1 ? Colors.black38 : invertCustom(Colors.black38))),
-                ),
-              ],
+            OverflowBox(
+              maxHeight: double.infinity,
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text('info', style: TextStyle(fontSize: fontSize_i, color: themeappLightDark==1 ? Colors.black38 : invertCustom(Colors.black38))),
+                  ),
+                ],
+              ),
             ),
+
           ),
         );
       } else if (soundNum !=23 && showVerticalBigLables == true) {
@@ -3014,103 +3072,108 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                       Stack(     // stack is only to show Fingering under the button Layer   // Stack is like Z-Layers in CSS or transparent Layers in Photoshop. It's a Stack
                         alignment: Alignment.center,      // is Solution how to Align center, do not need to change base point of CustomPainter or it's width
                         children: <Widget>[
-                          Column (
-                            children: [
-                              if(((soundNum==0 && stringsNum==22) || ((soundNum==0 || soundNum==21) && stringsNum==21)) && (buildKeysNotesOrFreqsMode==0 || buildKeysNotesOrFreqsMode==1 || buildKeysNotesOrFreqsMode==5 || buildKeysNotesOrFreqsMode==6)) ...[
-                                Container(
-                                  child:
-                                  CustomPaint(
-                                    size: Size(WIDTH_2,(WIDTH_2*0.5833333333333334).toDouble()), //You can Replace [WIDTH] with your desired width for Custom Paint and height will be calculated automatically
-                                    painter: RPSCustomPainter2(themeappLightDark: themeappLightDark),    // machine head
+                          OverflowBox(
+                            maxHeight: double.infinity,
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if(((soundNum==0 && stringsNum==22) || ((soundNum==0 || soundNum==21) && stringsNum==21)) && (buildKeysNotesOrFreqsMode==0 || buildKeysNotesOrFreqsMode==1 || buildKeysNotesOrFreqsMode==5 || buildKeysNotesOrFreqsMode==6)) ...[
+                                  Container(
+                                    child:
+                                    CustomPaint(
+                                      size: Size(WIDTH_2,(WIDTH_2*0.5833333333333334).toDouble()),
+                                      painter: RPSCustomPainter2(themeappLightDark: themeappLightDark),
+                                    ),
+                                  ) ,
+                                ] else if(((soundNum==0 && stringsNum==22) || ((soundNum==0 || soundNum==21) && stringsNum==21)) && buildKeysNotesOrFreqsMode==2) ...[
+                                  Container(
+                                    child:
+                                    CustomPaint(
+                                      size: Size(WIDTH_1,(WIDTH_1*0.5833333333333334).toDouble()),
+                                      painter: RPSCustomPainter1(themeappLightDark: themeappLightDark),
+                                    ),
+                                  ) ,
+                                ] else if(((soundNum==0 && stringsNum==22) || ((soundNum==0 || soundNum==21) && stringsNum==21)) && (buildKeysNotesOrFreqsMode==3 || buildKeysNotesOrFreqsMode==4)) ...[
+                                  Container(
+                                    child:
+                                    CustomPaint(
+                                      size: Size(WIDTH_1,(WIDTH_1*0.5833333333333334).toDouble()),
+                                      painter: RPSCustomPainter7(themeappLightDark: themeappLightDark),
+                                    ),
+                                  ) ,
+                                ] else ...[
+                                ],
+                                if (buildKeysNotesOrFreqsMode==1) ...[
+                                  size.width < pxlsWidth ?
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+2),),
+                                  )
+                                      :
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+6),),
                                   ),
-                                ) ,
-                              ] else if(((soundNum==0 && stringsNum==22) || ((soundNum==0 || soundNum==21) && stringsNum==21)) && buildKeysNotesOrFreqsMode==2) ...[
-                                Container(
-                                  child:
-                                  CustomPaint(
-                                    size: Size(WIDTH_1,(WIDTH_1*0.5833333333333334).toDouble()), //You can Replace [WIDTH] with your desired width for Custom Paint and height will be calculated automatically
-                                    painter: RPSCustomPainter1(themeappLightDark: themeappLightDark),    // wooden peg
+                                ] else if (buildKeysNotesOrFreqsMode==2) ...[
+                                  size.width < pxlsWidth ?
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+5),),
+                                  )
+                                      :
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+6),),
                                   ),
-                                ) ,
-                              ] else if(((soundNum==0 && stringsNum==22) || ((soundNum==0 || soundNum==21) && stringsNum==21)) && (buildKeysNotesOrFreqsMode==3 || buildKeysNotesOrFreqsMode==4)) ...[
-                                Container(
-                                  child:
-                                  CustomPaint(
-                                    size: Size(WIDTH_1,(WIDTH_1*0.5833333333333334).toDouble()), //You can Replace [WIDTH] with your desired width for Custom Paint and height will be calculated automatically
-                                    painter: RPSCustomPainter7(themeappLightDark: themeappLightDark),    // diam. measuring tool
+                                ] else if (buildKeysNotesOrFreqsMode==3) ...[
+                                  size.width < pxlsWidth ?
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
+                                  )
+                                      :
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
                                   ),
-                                ) ,
-                              ] else ...[
-// Leave it empty !!!
+                                ] else if (buildKeysNotesOrFreqsMode==4) ...[
+                                  size.width < pxlsWidth ?
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
+                                  )
+                                      :
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
+                                  ),
+                                ] else ...[
+                                  size.width < pxlsWidth ?
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey),),
+                                  )
+                                      :
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey),),
+                                  ),
+                                  size.width < pxlsWidth ?
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize),),
+                                  )
+                                      :
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize),),
+                                  ),
+                                ],
                               ],
-                              if (buildKeysNotesOrFreqsMode==1) ...[
-                                size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+2),),
-                                )
-                                    :                                                  // if -||-  > 1280 px
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+6),),
-                                ),
-                              ] else if (buildKeysNotesOrFreqsMode==2) ...[
-                                size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+5),),
-                                )
-                                    :                                                  // if -||-  > 1280 px
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize+6),),
-                                ),
-                              ] else if (buildKeysNotesOrFreqsMode==3) ...[
-                                size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
-                                )
-                                    :                                                  // if -||-  > 1280 px
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
-                                ),
-                              ] else if (buildKeysNotesOrFreqsMode==4) ...[
-                                size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
-                                )
-                                    :                                                  // if -||-  > 1280 px
-                                Align(
-                                  alignment: Alignment.center,
-                                  child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize-1),),
-                                ),
-                              ] else ...[
-                                size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey),),
-                                )
-                                    :                                                  // if -||-  > 1280 px
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey),),
-                                ),
-                                size.width < pxlsWidth ?                           // if width of mediaQuery of context < 1280 px
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize),),
-                                )
-                                    :                                                  // if -||-  > 1280 px
-                                Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize),),
-                                ),
-                              ],
-                            ],
+                            ),
                           ),
+
                           ///////////////  Fingering:
                           if (((soundNum!=0 && stringsNum==22) || ((soundNum!=0 && soundNum!=21) && stringsNum==21)) && buildKeysNotesOrFreqsMode==5 && showFingeringOnButtons[soundNum] == 1) ...[      // 1 = Index finger (right or left - by context)
                             InkWell(
