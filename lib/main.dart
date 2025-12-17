@@ -76,7 +76,7 @@ import 'dart:ui';
 // toDo: 4of5   dart pub remove audioplayers_web  ,   dart pub get audioplayers_web
 // toDo: 5of5   dart pub remove soundpool_web  ,      dart pub get soundpool_web
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle; // csv relative path
+import 'package:flutter/services.dart'; // csv relative path
 import 'package:path_provider/path_provider.dart';      // for getTemporaryDirectory
 //import 'package:ml_dataframe/ml_dataframe.dart';              // csv relative path (not Used)
 //import 'package:flutter/gestures.dart';                       // gesture binding, key pressing simulation (auto) (not Used, too Slow!)
@@ -113,8 +113,11 @@ final SoLoud audioEngine = SoLoud.instance;
 Map<String, AudioSource> soundCache = {};
 //
 //void main() {                                            // was without command line arguments               Adnroid
+late RootIsolateToken globalIsolateToken;
 void main(List<String> arguments) async{                        // with List of Win exe command line arguments  Windows
   WidgetsFlutterBinding.ensureInitialized();
+  await Future.delayed(const Duration(milliseconds: 100));
+  globalIsolateToken = RootIsolateToken.instance!;
   // await SoLoud.instance.init();
   if (arguments.isNotEmpty) {argument0 = arguments[0].replaceAll('\\', '/');} else {}  // replace all \-slashes to /-slashes in Path   Windows
   //***********************************************************      Conditional Target Platform !!! Blank Screen Android!!! Blank Screen Windows!!!! (but Process Runs!)
@@ -1743,6 +1746,9 @@ if (Platform.isWindows) {
 //
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
   void _setupPlayerIsolate(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Future.microtask(() {});
+    final token = RootIsolateToken.instance!;
     // developer.log(csvLst.toString());
 /////// SEND INITIAL DATA, add New Data Here:
 //     List<List<dynamic>> allData = [[ntTblNtfrsList], [iStarts], [iEnds], jBtnRelease, csvLst, [notesByBit], [rngExtend], [toggleIcnMsrBtn],
@@ -1761,7 +1767,8 @@ if (Platform.isWindows) {
 // developer.log(allData.toString());
 // List<List<dynamic>> allData = [[notesByBit], [rngExtend]];
     _receivePortFromPlayer = ReceivePort();
-    _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, _receivePortFromPlayer!.sendPort);
+    // _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, _receivePortFromPlayer!.sendPort);
+    _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, (sendPort: _receivePortFromPlayer!.sendPort, token: token));
     void _sendDataToPlayer(allData) {
       if (_sendPortToPlayer != null && allData is List && allData.isNotEmpty) {
         _sendPortToPlayer!.send(allData);
