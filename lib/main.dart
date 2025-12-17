@@ -117,50 +117,55 @@ import 'package:http/http.dart' as http;    //flutter pub add http
 //
 //
 Map<String, String> cachedFilesPaths = {};
-Future<void> unpackAssetsToTemp(List krSnd) async {
-  Future<void> initCachedFiles() async {
-    final dir = await getTemporaryDirectory();
-    final sub = ['wav', 'wavn', 'mp3', 'm4a'];
-    for (var typ in sub) {
-      final tdr = Directory('${dir.path}/assets/$typ'.replaceAll(RegExp(r'[/\\]+'), '/'));
-      if (!await tdr.exists()) await tdr.create(recursive: true);
+Future<void> unpackAssetsToTemp() async {
+  developer.log('!!! STARTING CACHE PROCESS !!!'); // Этот лог должен появиться первым
+  final dir = await getTemporaryDirectory();
+  final sub = ['wav', 'wavn', 'mp3', 'm4a'];
+  for (var typ in sub) {
+    final tdr = Directory('${dir.path}/assets/$typ'.replaceAll(RegExp(r'[/\\]+'), '/'));
+    if (!await tdr.exists()) {
+      await tdr.create(recursive: true);
     }
-    for (var tix = 0; tix < krSnd.length; tix++) {
-      for (var nix = 0; nix < krSnd[tix].length; nix++) {
-        for (var six = 0; six < krSnd[tix][nix].length; six++) {
-          final nam = krSnd[tix][nix][six].toString().trim();
-          if (nam == 'null' || nam.isEmpty) continue;
-          for (var ext in ['wav', 'WAV', 'mp3', 'm4a']) {
-            String folder = ext.toLowerCase() == 'wav' ? 'wavn' : ext.toLowerCase();
-            String assetPth = 'assets/$folder/$nam.$ext'.replaceAll(RegExp(r'[/\\]+'), '/');
-            String localPth = '${dir.path}/$assetPth'.replaceAll(RegExp(r'[/\\]+'), Platform.isWindows ? r'\' : '/');
-            final tpf = File(localPth);
-            developer.log('PROCESSING: $assetPth');
-            if (!await tpf.exists()) {
-              try {
-                final bts = await rootBundle.load(assetPth);
+  }
+  for (var tix = 0; tix < krSnd.length; tix++) {
+    for (var nix = 0; nix < krSnd[tix].length; nix++) {
+      for (var six = 0; six < krSnd[tix][nix].length; six++) {
+        final nam = krSnd[tix][nix][six].toString().trim();
+        if (nam == 'null' || nam.isEmpty) continue;
+        for (var ext in ['wav', 'WAV', 'mp3', 'm4a']) {
+          String folder = (ext.toLowerCase() == 'wav' || ext.toLowerCase() == 'wavn') ? 'wavn' : ext.toLowerCase();
+          String assetPth = 'assets/$folder/$nam.$ext'.replaceAll(RegExp(r'[/\\]+'), '/');
+          String localPth = '${dir.path}/$assetPth'.replaceAll(RegExp(r'[/\\]+'), Platform.isWindows ? r'\' : '/');
+          final tpf = File(localPth);
+          // developer.log('TARGET: $assetPth');
+          if (!await tpf.exists()) {
+            try {
+              final bts = await rootBundle.load(assetPth);
+              if (!await tpf.parent.exists()) {
                 await tpf.parent.create(recursive: true);
-                await tpf.writeAsBytes(bts.buffer.asUint8List(), flush: true);
-                cachedFilesPaths[assetPth] = tpf.path;
-                developer.log('SAVED_NEW: ${tpf.path}');
-              } catch (e) {
-                developer.log('NOT_FOUND_IN_ASSETS: $assetPth');
               }
-            } else {
+              await tpf.writeAsBytes(bts.buffer.asUint8List(), flush: true);
               cachedFilesPaths[assetPth] = tpf.path;
-              developer.log('ALREADY_EXISTS: ${tpf.path}');
+              // developer.log('SUCCESS: Saved to ${tpf.path}');
+            } catch (e) {
+              // Если файла нет в ассетах, вы увидите это в логе
+              // developer.log('MISSING: $assetPth not found in rootBundle');
             }
+          } else {
+            cachedFilesPaths[assetPth] = tpf.path;
+            // developer.log('SKIP: Already exists ${tpf.path}');
           }
         }
       }
     }
   }
+  // developer.log('!!! CACHE PROCESS FINISHED !!!');
 }
 //
 //
 void main(List<String> arguments) async{                        // with List of Win exe command line arguments  Windows
    WidgetsFlutterBinding.ensureInitialized();
-   await unpackAssetsToTemp(krSnd);
+   // await unpackAssetsToTemp();
   // await Future.delayed(const Duration(milliseconds: 100));
   // globalIsolateToken = RootIsolateToken.instance!;
   // await SoLoud.instance.init();
@@ -379,6 +384,7 @@ void playNote(String note) {            // simple JS tonic
   } //end initState ()
   //
   void initStateFunctions() {
+    unpackAssetsToTemp();
     fillDefaultColorsList();    //***THIS IS SYNCHRONOUS FUNCTION
     if(themeappLightDark != 1) {int i=0; for (Color colorEl in keysColorsList) {keysColorsList[i] =  invertCustom(colorEl); i++;}} else {};
     fillDefaultFingeringList(); //CALL
@@ -1792,28 +1798,29 @@ if (Platform.isWindows) {
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
   void _setupPlayerIsolate(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
     WidgetsFlutterBinding.ensureInitialized();
+    // unpackAssetsToTemp();
     // await Future.microtask(() {});
     // final token = RootIsolateToken.instance!;
     // developer.log(csvLst.toString());
 /////// SEND INITIAL DATA, add New Data Here:
 //     List<List<dynamic>> allData = [[ntTblNtfrsList], [iStarts], [iEnds], jBtnRelease, csvLst, [notesByBit], [rngExtend], [toggleIcnMsrBtn],
 //       [fromTheBegin], [shortOrLongNum], [selectedtuningNum], [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]];
-//     List<List<dynamic>> allData = [
-//       [ntTblNtfrsList], [iStarts], [iEnds],
-//       jBtnRelease is List ? jBtnRelease : [],
-//       csvLst is List ? csvLst : [],
-//       [notesByBit], [rngExtend], [toggleIcnMsrBtn],
-//       [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
-//       [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value], [cachedFilesPaths]
-//     ];
     List<List<dynamic>> allData = [
       [ntTblNtfrsList], [iStarts], [iEnds],
       jBtnRelease is List ? jBtnRelease : [],
       csvLst is List ? csvLst : [],
       [notesByBit], [rngExtend], [toggleIcnMsrBtn],
       [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
-      [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]
+      [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value], [cachedFilesPaths]
     ];
+//     List<List<dynamic>> allData = [
+//       [ntTblNtfrsList], [iStarts], [iEnds],
+//       jBtnRelease is List ? jBtnRelease : [],
+//       csvLst is List ? csvLst : [],
+//       [notesByBit], [rngExtend], [toggleIcnMsrBtn],
+//       [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
+//       [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]
+//     ];
 
 ///////
 // developer.log(allData.toString());
