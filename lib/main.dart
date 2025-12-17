@@ -118,29 +118,38 @@ import 'package:http/http.dart' as http;    //flutter pub add http
 //
 Map<String, String> cachedFilesPaths = {};
 Future<void> unpackAssetsToTemp(List krSnd) async {
-  final dir = await getTemporaryDirectory();
-  final sub = ['wav', 'wavn', 'mp3', 'm4a'];
-  for (var typ in sub) {
-    final tdr = Directory('${dir.path}/assets/$typ');
-    if (!await tdr.exists()) await tdr.create(recursive: true);
-  }
-  for (var tix = 0; tix < krSnd.length; tix++) {
-    for (var nix = 0; nix < krSnd[tix].length; nix++) {
-      for (var six = 0; six < krSnd[tix][nix].length; six++) {
-        final nam = krSnd[tix][nix][six].toString();
-        if (nam == 'null' || nam.isEmpty) continue;
-        for (var ext in ['wav', 'mp3', 'm4a']) {
-          final pth = 'assets/$ext/$nam.$ext';
-          final tpf = File('${dir.path}/$pth');
-          if (!await tpf.exists()) {
-            try {
-              final bts = await rootBundle.load(pth);
-              await tpf.writeAsBytes(bts.buffer.asUint8List());
-              cachedFilesPaths[pth] = tpf.path;
-              developer.log(pth.toString());
-            } catch (_) {}
-          } else {
-            cachedFilesPaths[pth] = tpf.path;
+  Future<void> initCachedFiles() async {
+    final dir = await getTemporaryDirectory();
+    final sub = ['wav', 'wavn', 'mp3', 'm4a'];
+    for (var typ in sub) {
+      final tdr = Directory('${dir.path}/assets/$typ'.replaceAll(RegExp(r'[/\\]+'), '/'));
+      if (!await tdr.exists()) await tdr.create(recursive: true);
+    }
+    for (var tix = 0; tix < krSnd.length; tix++) {
+      for (var nix = 0; nix < krSnd[tix].length; nix++) {
+        for (var six = 0; six < krSnd[tix][nix].length; six++) {
+          final nam = krSnd[tix][nix][six].toString().trim();
+          if (nam == 'null' || nam.isEmpty) continue;
+          for (var ext in ['wav', 'WAV', 'mp3', 'm4a']) {
+            String folder = ext.toLowerCase() == 'wav' ? 'wavn' : ext.toLowerCase();
+            String assetPth = 'assets/$folder/$nam.$ext'.replaceAll(RegExp(r'[/\\]+'), '/');
+            String localPth = '${dir.path}/$assetPth'.replaceAll(RegExp(r'[/\\]+'), Platform.isWindows ? r'\' : '/');
+            final tpf = File(localPth);
+            developer.log('PROCESSING: $assetPth');
+            if (!await tpf.exists()) {
+              try {
+                final bts = await rootBundle.load(assetPth);
+                await tpf.parent.create(recursive: true);
+                await tpf.writeAsBytes(bts.buffer.asUint8List(), flush: true);
+                cachedFilesPaths[assetPth] = tpf.path;
+                developer.log('SAVED_NEW: ${tpf.path}');
+              } catch (e) {
+                developer.log('NOT_FOUND_IN_ASSETS: $assetPth');
+              }
+            } else {
+              cachedFilesPaths[assetPth] = tpf.path;
+              developer.log('ALREADY_EXISTS: ${tpf.path}');
+            }
           }
         }
       }
