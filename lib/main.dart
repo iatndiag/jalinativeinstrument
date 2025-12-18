@@ -118,7 +118,7 @@ import 'package:http/http.dart' as http;    //flutter pub add http
 //
 Map<String, String> cachedFilesPaths = {};
 Future<void> unpackAssetsToTemp() async {
-  developer.log('!!! STARTING CACHE PROCESS !!!'); // Этот лог должен появиться первым
+  // developer.log('!!! STARTING CACHE PROCESS !!!');
   final dir = await getTemporaryDirectory();
   final sub = ['wav', 'wavn', 'mp3', 'm4a'];
   for (var typ in sub) {
@@ -148,7 +148,6 @@ Future<void> unpackAssetsToTemp() async {
               cachedFilesPaths[assetPth] = tpf.path;
               // developer.log('SUCCESS: Saved to ${tpf.path}');
             } catch (e) {
-              // Если файла нет в ассетах, вы увидите это в логе
               // developer.log('MISSING: $assetPth not found in rootBundle');
             }
           } else {
@@ -384,7 +383,7 @@ void playNote(String note) {            // simple JS tonic
   } //end initState ()
   //
   void initStateFunctions() {
-    unpackAssetsToTemp();
+    // unpackAssetsToTemp();
     fillDefaultColorsList();    //***THIS IS SYNCHRONOUS FUNCTION
     if(themeappLightDark != 1) {int i=0; for (Color colorEl in keysColorsList) {keysColorsList[i] =  invertCustom(colorEl); i++;}} else {};
     fillDefaultFingeringList(); //CALL
@@ -1798,7 +1797,7 @@ if (Platform.isWindows) {
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
   void _setupPlayerIsolate(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
     WidgetsFlutterBinding.ensureInitialized();
-    // unpackAssetsToTemp();
+    await unpackAssetsToTemp();
     // await Future.microtask(() {});
     // final token = RootIsolateToken.instance!;
     // developer.log(csvLst.toString());
@@ -1839,9 +1838,10 @@ if (Platform.isWindows) {
     _receivePortFromPlayer!.listen((message) async{
    // if (message is SendPort) {_sendPortToPlayer = message;_sendDataToPlayer(allData);developer.log("main_isolate: Port received. Ready to send data.");}
       if (message is SendPort) {
-        _sendPortToPlayer = message;_sendDataToPlayer(allData);
+        _sendPortToPlayer = message;
         final token = RootIsolateToken.instance!;
         _sendPortToPlayer!.send(token);
+        _sendDataToPlayer(allData);
       }
    //
       if (message is String) {
