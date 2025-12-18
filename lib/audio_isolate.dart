@@ -46,19 +46,13 @@ bool ISOcnslDelay1Ntfr = false;        // specify
 List<Map<String, bool>> ISObuttonsNotifier = [];  // specify
 //
 Map<String, String> cachedFilesPaths = {};
+
 //
 @pragma('vm:entry-point')                                         // for Release, To prevent playerIsolateEntryPoint from being automatically removed as unnecessary
 void playerIsolateEntryPoint (SendPort sendPortToMain) async{     // Top-Level Function Always !!!
 //    void playerIsolateEntryPoint(({SendPort sendPort, RootIsolateToken token}) data) async {
 //   BackgroundIsolateBinaryMessenger.ensureInitialized(data.token);
 //   await SoLoud.instance.init();
-  final receivePortFromMain = ReceivePort();
-  sendPortToMain.send(receivePortFromMain.sendPort);
-  // data.sendPort.send(receivePortFromMain.sendPort);
-  receivePortFromMain.listen((message) async {                                                     // async is Here
- //
-    if (message is RootIsolateToken) {
-      BackgroundIsolateBinaryMessenger.ensureInitialized(message); // rootBundle for this Isolate
       final SoLoud audioEngine = SoLoud.instance;
       // Map<String, AudioSource> soundCache = {};
       // await SoLoud.instance.init();
@@ -70,7 +64,14 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{     // Top-Level F
           sendPortToMain.send('Log: my SoLoud init error: $e');
         }
       }
-    }
+  final receivePortFromMain = ReceivePort();
+  sendPortToMain.send(receivePortFromMain.sendPort);
+  // data.sendPort.send(receivePortFromMain.sendPort);
+  receivePortFromMain.listen((message) async {                                                     // async is Here
+ //
+ //    if (message is RootIsolateToken) {
+ //      BackgroundIsolateBinaryMessenger.ensureInitialized(message); // rootBundle for this Isolate
+ //    }
  //
  //
  // Do not use delay less than 0.001s or 1ms or 1000 us (microseconds)! Delay breakdown occurs!
@@ -103,45 +104,56 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{     // Top-Level F
     } // end reCalculateMD2()
  //
  //
-    if (message is List && message.length >= 1) {
-      ISOrangeStart = message[0][0][0]['rangeStart'];                                              //  = = = = = = = = = = =  operator !!!
-      ISOrangeEnd           = message[0][0][1]['rangeEnd'];                                        // It is the assignment operator that is required! It simulates an event listener
-      ISOstartBit           = message[0][0][2]['startBit'];
-      ISOplayingBit          = message[0][0][3]['playingBit'];
-      ISOtableChangeCount    = message[0][0][4]['tableChangeCount'];
-      ISOmsrTgl              = message[0][0][5]['msrTgl'];
-      ISOtableChangeCount32  = message[0][0][6]['tableChangeCount32'];
-      ISOtableChangeCount64  = message[0][0][7]['tableChangeCount64'];
+    if (message is List && message.length > 15) {
+      ISOrangeStart =
+      message[0][0][0]['rangeStart']; //  = = = = = = = = = = =  operator !!!
+      ISOrangeEnd =
+      message[0][0][1]['rangeEnd']; // It is the assignment operator that is required! It simulates an event listener
+      ISOstartBit = message[0][0][2]['startBit'];
+      ISOplayingBit = message[0][0][3]['playingBit'];
+      ISOtableChangeCount = message[0][0][4]['tableChangeCount'];
+      ISOmsrTgl = message[0][0][5]['msrTgl'];
+      ISOtableChangeCount32 = message[0][0][6]['tableChangeCount32'];
+      ISOtableChangeCount64 = message[0][0][7]['tableChangeCount64'];
       ISOtableChangeCount128 = message[0][0][8]['tableChangeCount128'];
-      ISOisSwitched_32_64_128       = message[0][0][15]['listener_32_64_128'];
-      ISOmode_3264_or_64128         = message[0][0][16]['listener_3264_64128'];
-      ISOnTcolS                     = message[0][0][21]['nTcolS'];
-      ISOonTapCollisionPrevention_1 = message[0][0][25]['onTapCollisionPrevention_1'];
-      ISOonTapCollisionPrevention_2 = message[0][0][26]['onTapCollisionPrevention_2'];
-      ISOonTapCollisionPrevention_3 = message[0][0][27]['onTapCollisionPrevention_3'];
-      ISOiStarts          = message[1][0];
-      ISOiEnds            = message[2][0]; //developer.log(ISOiEnds.toString());
-      ISOjBtnRelease      = message[3];
-      ISOcsvLst           = message[4];
-      ISOnotesByBit       = message[5][0];
-      ISOrngExtend        = message[6][0];
-      ISOtoggleIcnMsrBtn  = message[7][0];
-      ISOfromTheBegin     = message[8][0];
-      ISOshortOrLongNum   = message[9][0];
+      ISOisSwitched_32_64_128 = message[0][0][15]['listener_32_64_128'];
+      ISOmode_3264_or_64128 = message[0][0][16]['listener_3264_64128'];
+      ISOnTcolS = message[0][0][21]['nTcolS'];
+      ISOonTapCollisionPrevention_1 =
+      message[0][0][25]['onTapCollisionPrevention_1'];
+      ISOonTapCollisionPrevention_2 =
+      message[0][0][26]['onTapCollisionPrevention_2'];
+      ISOonTapCollisionPrevention_3 =
+      message[0][0][27]['onTapCollisionPrevention_3'];
+      ISOiStarts = message[1][0];
+      ISOiEnds = message[2][0]; //developer.log(ISOiEnds.toString());
+      ISOjBtnRelease = message[3];
+      ISOcsvLst = message[4];
+      ISOnotesByBit = message[5][0];
+      ISOrngExtend = message[6][0];
+      ISOtoggleIcnMsrBtn = message[7][0];
+      ISOfromTheBegin = message[8][0];
+      ISOshortOrLongNum = message[9][0];
       ISOselectedtuningNum = message[10][0];
-      ISOnoteVolume        = message[11][0];
-      ISOextension         = message[12][0];
-      ISOcnslDelay1Ntfr    = message[13][0];
-   // ISObuttonsNotifier   = message[14][0];
+      ISOnoteVolume = message[11][0];
+      ISOextension = message[12][0];
+      ISOcnslDelay1Ntfr = message[13][0];
+      // ISObuttonsNotifier   = message[14][0];
       //
+    }
 if (message.length > 15 && message[15] != null && message[15][0] is Map) {
   // var dataFromMain = message[15][0];
   cachedFilesPaths = Map<String, String>.from(message[15][0]);
 }
       //
  // await Future.microtask(() {});
+developer.log('Isolate Received Other: ${message.runtimeType} | Content: $message');
 developer.log(cachedFilesPaths.toString());
       //
+    await listTraversal ();
+});
+//
+void listTraversal () async {
       //
       void addButtonsStates(int btnNum, bool locFing) {                                        // See also SplayTreeMap (Sorted! HashMap), "Splay"!
       //   //if(stringsNum==21 && btnNum==21) { btnNum = 22;} else if(stringsNum==21 && btnNum==22)  { btnNum = 21;} else {}   // remember that in loadTagsFirst() data1[i][21] and  data1[i][22] were changed by place for 21-string, but in csvLst does not changed
@@ -640,7 +652,6 @@ playSound(ISOselectedtuningNum, j, ISOshortOrLongNum, ISOnoteVolume, ISOextensio
 // sendPortToMain.send('SETSTATE');
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     }
-   });
 } //end IsolateEntryPoint
 //
 //
