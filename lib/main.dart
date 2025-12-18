@@ -158,7 +158,7 @@ Future<void> unpackAssetsToTemp() async {
       }
     }
   }
-  // developer.log('!!! CACHE PROCESS FINISHED !!!');
+   developer.log('!!! CACHE PROCESS FINISHED !!!');
 }
 //
 //
@@ -1797,7 +1797,7 @@ if (Platform.isWindows) {
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
   void _setupPlayerIsolate(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
     WidgetsFlutterBinding.ensureInitialized();
-    await unpackAssetsToTemp();
+    await unpackAssetsToTemp();         // await !!!
     // await Future.microtask(() {});
     // final token = RootIsolateToken.instance!;
     // developer.log(csvLst.toString());
@@ -1829,8 +1829,9 @@ if (Platform.isWindows) {
     // _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, (sendPort: _receivePortFromPlayer!.sendPort, token: token));
     void _sendDataToPlayer(allData) {
       if (_sendPortToPlayer != null && allData is List && allData.isNotEmpty) {
+        developer.log("1st: Alldata is a non-empty List");
         _sendPortToPlayer!.send(allData);
-        // developer.log("test_1: Data sent to player isolate.");
+        developer.log("2nd: Alldata has been send");
       } else {
         // developer.log("Error: _sendPortToPlayer is null.");
       }
@@ -1839,8 +1840,8 @@ if (Platform.isWindows) {
    // if (message is SendPort) {_sendPortToPlayer = message;_sendDataToPlayer(allData);developer.log("main_isolate: Port received. Ready to send data.");}
       if (message is SendPort) {
         _sendPortToPlayer = message;
-        final token = RootIsolateToken.instance!;
-        _sendPortToPlayer!.send(token);
+        // final token = RootIsolateToken.instance!;
+        // _sendPortToPlayer!.send(token);
         _sendDataToPlayer(allData);
       }
    //
