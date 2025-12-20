@@ -6,7 +6,7 @@
 // DART-Lang, Musical Tuition Project: African Harp Kora : Player, NotationReader, Tuner:  multi-Platform //
 //********************************************************************************************************//
 /////////////////////////////////////////////////
-import 'package:flutter_soloud/flutter_soloud.dart';
+// import 'package:flutter_soloud/flutter_soloud.dart';
 import 'dart:developer' as developer;
 import 'dart:isolate';
 import 'package:jalinativeinstrument/utils/color_utils.dart';
@@ -116,6 +116,12 @@ import 'package:http/http.dart' as http;    //flutter pub add http
 // late RootIsolateToken globalIsolateToken;
 //
 //
+///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 2 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
+Isolate? _playerIsolate;                                       // _ _ _ _ Symbol means private, top-level variable will not be visible from the Another File
+SendPort? _sendPortToPlayer;
+ReceivePort? _receivePort;
+Stream? _playerStream;
+/////// end NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 2 OF 3
 Map<String, String> cachedFilesPaths = {};
 Future<void> unpackAssetsToTemp() async {
   // developer.log('!!! STARTING CACHE PROCESS !!!');
@@ -132,7 +138,8 @@ Future<void> unpackAssetsToTemp() async {
       for (var six = 0; six < krSnd[tix][nix].length; six++) {
         final nam = krSnd[tix][nix][six].toString().trim();
         if (nam == 'null' || nam.isEmpty) continue;
-        for (var ext in ['wav', 'WAV', 'mp3', 'm4a']) {
+     // for (var ext in ['wav', 'WAV', 'mp3', 'm4a']) {
+        for (var ext in ['WAV', 'mp3', 'm4a']) {
           String folder = (ext.toLowerCase() == 'wav' || ext.toLowerCase() == 'wavn') ? 'wavn' : ext.toLowerCase();
           String assetPth = 'assets/$folder/$nam.$ext'.replaceAll(RegExp(r'[/\\]+'), '/');
           String localPth = '${dir.path}/$assetPth'.replaceAll(RegExp(r'[/\\]+'), Platform.isWindows ? r'\' : '/');
@@ -144,7 +151,7 @@ Future<void> unpackAssetsToTemp() async {
               if (!await tpf.parent.exists()) {
                 await tpf.parent.create(recursive: true);
               }
-              await tpf.writeAsBytes(bts.buffer.asUint8List(), flush: true);
+              await tpf.writeAsBytes(bts.buffer.asUint8List(), flush: true);      // flush will free up the file for other threads
               cachedFilesPaths[assetPth] = tpf.path;
               // developer.log('SUCCESS: Saved to ${tpf.path}');
             } catch (e) {
@@ -158,7 +165,7 @@ Future<void> unpackAssetsToTemp() async {
       }
     }
   }
-   developer.log('!!! CACHE PROCESS FINISHED !!!');
+   // developer.log('!!! CACHE PROCESS FINISHED !!!');
 }
 //
 //
@@ -240,11 +247,6 @@ class _JaliinstrumentState extends State<Jaliinstrument> with WidgetsBindingObse
   // FocusAttachment nodeAttachment;
   // nodeAttachment = measuresButtonFocusNode.attach(context, onKey: _handleKeyPress);
 //
-///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 2 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
-  Isolate? _playerIsolate;
-  SendPort? _sendPortToPlayer;
-  ReceivePort? _receivePortFromPlayer;
-/////// end NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 2 OF 3
 //
 //   FlutterAudioCapture _audioRecorder = new FlutterAudioCapture();  // NEW recorder from audio_capture 1 of 4
 //
@@ -361,10 +363,28 @@ void playNote(String note) {            // simple JS tonic
     droptuningList = List.from(droptuningList); // remove null-elements if they are present
   } // end fillTuningList()
 //
+//
+  Future<void> initIsolateFunctions() async {             // HandShaking   Isolate - to - 2ndIsolate
+    if (_playerIsolate != null) return;
+    await unpackAssetsToTemp();
+    _receivePort = ReceivePort();
+    _playerStream = _receivePort!.asBroadcastStream();
+    _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, _receivePort!.sendPort);
+    _playerStream!.listen((message) {
+      if (message is SendPort) {
+        _sendPortToPlayer = message;
+        _sendPortToPlayer!.send(RootIsolateToken.instance!);
+      } else if (message == "TOKEN_READY") {
+        _sendPortToPlayer?.send(cachedFilesPaths);
+      } else {}
+    });
+  }
+ // end initIsolateFunctions()
   @override
   void initState() {
     super.initState();  // should always be the first line in your initState method
   //fillTuningList();   // filling list of the tunings
+    initIsolateFunctions();
 ///////////////////////////////////////////////  foreground/ background observer for android 2 of 3  ///////////////////////
     WidgetsBinding.instance.addObserver(this);
 /////////////////////////////////////////////// end foreground/ background observer for android 2 of 3  ///////////////////////
@@ -373,7 +393,6 @@ void playNote(String note) {            // simple JS tonic
     // themeappLightDarkChange(false);  //ASYNC cannot be there until the List will not be Filled!
     //
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 1 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
-    _setupPlayerIsolate(1, 1, [], csvLst, 1, false);
 /////// end NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 1 OF 3
 //     _audioRecorder.init();              // Initialize NEW recorder from audio_capture 2 of 4
     //
@@ -1418,40 +1437,40 @@ if (Platform.isWindows) {
 //
 //
   Future<void> playSound(int tuning, int number, int shortOrLong, double nVol, int ext) async {
-    if (!audioEngine.isInitialized) {
-      await audioEngine.init();
-    }
-    String xtsn_ = '';
-    String aP_ = '';
-    int tI_ = tuning - 1;
-    int nI_ = number - 1;
-    int sOl_ = shortOrLong - 1;
-    switch (ext) {
-      case 1: xtsn_ = 'wav'; aP_ = 'assets/wav/'; break;
-      case 2: xtsn_ = 'm4a'; aP_ = 'assets/m4a/'; break;
-      case 4: xtsn_ = 'mp3'; aP_ = 'assets/mp3/'; break;
-      default: xtsn_ = 'wav'; aP_ = 'assets/wav/'; break;
-    }
-    if (tuning == 11) { tI_ = 3 - 1; aP_ = 'assets/wavn/'; }
-    if (tuning == 12) { tI_ = 4 - 1; aP_ = 'assets/wavn/'; }
-    if (tuning == 14) { tI_ = 10 - 1; aP_ = 'assets/wav/'; }
-    if (tuning == 15) { tI_ = 11 - 1; aP_ = 'assets/wav/'; }
-    String fileName = krSnd[tI_][nI_][sOl_].toString();
-    String fullPath = '$aP_$fileName.$xtsn_';
-    try {
-      AudioSource? source;
-      if (soundCache.containsKey(fullPath)) {
-        source = soundCache[fullPath];
-      } else {
-        source = await audioEngine.loadAsset(fullPath);
-        soundCache[fullPath] = source;
-      }
-      if (source != null) {
-        await audioEngine.play(source, volume: nVol);
-      }
-    } catch (e) {
-      print(e);
-    }
+    // if (!audioEngine.isInitialized) {
+    //   await audioEngine.init();
+    // }
+    // String xtsn_ = '';
+    // String aP_ = '';
+    // int tI_ = tuning - 1;
+    // int nI_ = number - 1;
+    // int sOl_ = shortOrLong - 1;
+    // switch (ext) {
+    //   case 1: xtsn_ = 'wav'; aP_ = 'assets/wav/'; break;
+    //   case 2: xtsn_ = 'm4a'; aP_ = 'assets/m4a/'; break;
+    //   case 4: xtsn_ = 'mp3'; aP_ = 'assets/mp3/'; break;
+    //   default: xtsn_ = 'wav'; aP_ = 'assets/wav/'; break;
+    // }
+    // if (tuning == 11) { tI_ = 3 - 1; aP_ = 'assets/wavn/'; }
+    // if (tuning == 12) { tI_ = 4 - 1; aP_ = 'assets/wavn/'; }
+    // if (tuning == 14) { tI_ = 10 - 1; aP_ = 'assets/wav/'; }
+    // if (tuning == 15) { tI_ = 11 - 1; aP_ = 'assets/wav/'; }
+    // String fileName = krSnd[tI_][nI_][sOl_].toString();
+    // String fullPath = '$aP_$fileName.$xtsn_';
+    // try {
+    //   AudioSource? source;
+    //   if (soundCache.containsKey(fullPath)) {
+    //     source = soundCache[fullPath];
+    //   } else {
+    //     source = await audioEngine.loadAsset(fullPath);
+    //     soundCache[fullPath] = source;
+    //   }
+    //   if (source != null) {
+    //     await audioEngine.play(source, volume: nVol);
+    //   }
+    // } catch (e) {
+    //   print(e);
+    // }
   }// end PlaySound ()
 //
 //
@@ -1795,144 +1814,118 @@ if (Platform.isWindows) {
 //
 //
 ///////     NEW SOLUTION: USING TIMER IN THE SECOND "ISOLATE" 3 OF 3          (FOR SENDING DATA INTO THE MAIN ISOLATE WITH THE GUI)
-  void _setupPlayerIsolate(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
+  void _sendDataNDcommandToISO(int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
     WidgetsFlutterBinding.ensureInitialized();
-    await unpackAssetsToTemp();         // await !!!
-    // await Future.microtask(() {});
-    // final token = RootIsolateToken.instance!;
-    // developer.log(csvLst.toString());
-/////// SEND INITIAL DATA, add New Data Here:
-//     List<List<dynamic>> allData = [[ntTblNtfrsList], [iStarts], [iEnds], jBtnRelease, csvLst, [notesByBit], [rngExtend], [toggleIcnMsrBtn],
-//       [fromTheBegin], [shortOrLongNum], [selectedtuningNum], [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]];
     List<List<dynamic>> allData = [
       [ntTblNtfrsList], [iStarts], [iEnds],
       jBtnRelease is List ? jBtnRelease : [],
       csvLst is List ? csvLst : [],
       [notesByBit], [rngExtend], [toggleIcnMsrBtn],
       [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
-      [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value], [cachedFilesPaths]
+      [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]
     ];
-//     List<List<dynamic>> allData = [
-//       [ntTblNtfrsList], [iStarts], [iEnds],
-//       jBtnRelease is List ? jBtnRelease : [],
-//       csvLst is List ? csvLst : [],
-//       [notesByBit], [rngExtend], [toggleIcnMsrBtn],
-//       [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
-//       [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]
-//     ];
-
-///////
-// developer.log(allData.toString());
-// List<List<dynamic>> allData = [[notesByBit], [rngExtend]];
-    _receivePortFromPlayer = ReceivePort();
-    _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, _receivePortFromPlayer!.sendPort);
-    // _playerIsolate = await Isolate.spawn(playerIsolateEntryPoint, (sendPort: _receivePortFromPlayer!.sendPort, token: token));
-    void _sendDataToPlayer(allData) {
-      if (_sendPortToPlayer != null && allData is List && allData.isNotEmpty) {
-        developer.log("1st: Alldata is a non-empty List");
-        _sendPortToPlayer!.send(allData);
-        developer.log("2nd: Alldata has been send");
-      } else {
-        // developer.log("Error: _sendPortToPlayer is null.");
-      }
+    if (_sendPortToPlayer != null) {
+        if (allData is List && allData.isNotEmpty) {
+          _sendPortToPlayer!.send(allData);
+        }
+      await _playerStream!.firstWhere((msg) => msg == "DATA_READY");      // first subscription and deletion of subscription, waiting for DATA_READY
+      _sendPortToPlayer!.send("PLAY");
     }
-    _receivePortFromPlayer!.listen((message) async{
-   // if (message is SendPort) {_sendPortToPlayer = message;_sendDataToPlayer(allData);developer.log("main_isolate: Port received. Ready to send data.");}
-      if (message is SendPort) {
-        _sendPortToPlayer = message;
-        // final token = RootIsolateToken.instance!;
-        // _sendPortToPlayer!.send(token);
-        _sendDataToPlayer(allData);
-      }
-   //
-      if (message is String) {
-        final parts = message.split(':');
-        final key = parts[0];
-        final value = parts.length > 1 ? parts[1] : null;
-        switch (key) {
-          case 'oneTraversingInstanceLaunched': oneTraversingInstanceLaunched = (value == 'true'); break;
-          case 'showArrowMoveToTheLeft': showArrowMoveToTheLeft = (value == 'true'); break;
-          case 'showVerticalBigLables': showVerticalBigLables = (value == 'true'); break;
-          case 'toggleIcnMsrBtn': toggleIcnMsrBtn = (value == 'true'); break;
-          case 'fromTheBegin': fromTheBegin = (value == 'true'); break;
-          case 'onTapCollisionPrevention_1': ntTblNtfrsList[25]['onTapCollisionPrevention_1'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'msrTgl': ntTblNtfrsList[5]['msrTgl'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'tableChangeCount128': ntTblNtfrsList[8]['tableChangeCount128'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'tableChangeCount64': ntTblNtfrsList[7]['tableChangeCount64'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'tableChangeCount32': ntTblNtfrsList[6]['tableChangeCount32'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'tableChangeCount': ntTblNtfrsList[4]['tableChangeCount'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'rangeStart': ntTblNtfrsList[0]['rangeStart'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'rangeEnd': ntTblNtfrsList[1]['rangeEnd'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'isSwitched_32_64_128': isSwitched_32_64_128 = int.tryParse(value ?? '32') ?? 32; break;
-          case 'playingBit': playingBit = int.tryParse(value ?? '0') ?? 0; break;
-          case 'startBit': ntTblNtfrsList[2]['startBit'] = int.tryParse(value ?? '0') ?? 0; break;
-          case 'mode_3264_or_64128': mode_3264_or_64128 = int.tryParse(value ?? '0') ?? 0; break;
-          case 'SETBUTTONSNOTIFIERREQUEST': buttonsNotifier.value = []; break;
-          case 'GETNOTIFIERREQUEST': _sendDataToPlayer(allData); break;
-          case 'SETNOTIFIERREQUEST': ntTblNotifier.value = ntTblNtfrsList; break;
-          case 'setDataSharedPref': setDataSharedPref(); break;
-          case 'checkIfTCCareOutOfLimits': checkIfTCCareOutOfLimits(); break;
-          case 'SETSTATE': setState(() {}); break;
-        } // end switch
-      } // end if
-      //
-      // if (message is String && message == "SETSTATE")                     {setState(() {});}
-      // if (message is String && message == "SETBUTTONSNOTIFIERREQUEST")    {setState(() {});}
-      // if (message is String && message == "onTapCollisionPrevention_1:1") {setState(() {});}
-      // if (message is String && message == "SETNOTIFIERREQUEST")           {setState(() {});}
-      // if (message is String && message == "GETNOTIFIERREQUEST")           {setState(() {});}
-      // if (message is String && message == "tableChangeCount128") {setState(() {});}
-      // if (message is String && message == "tableChangeCount64") {setState(() {});}
-      // if (message is String && message == "tableChangeCount32") {setState(() {});}
-      // if (message is String && message == "playingBit") {setState(() {});}
-      // if (message is String && message == "startBit") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // if (message is String && message == "SETSTATE") {setState(() {});}
-      // SETSTATE
-      // SETBUTTONSNOTIFIERREQUEST
-      // onTapCollisionPrevention_1:1
-      // SETNOTIFIERREQUEST
-      // GETNOTIFIERREQUEST
-      // tableChangeCount128:
-      // tableChangeCount64:
-      // tableChangeCount32:
-      // playingBit:
-      // startBit:
-      // tableChangeCount:
-      // rangeStart:
-      // rangeEnd:
-      // if (message is String && message == "oneTraversingInstanceLaunched") {oneTraversingInstanceLaunched = true; setState(() {});}
-      // if (message is String && message == "showArrowMoveToTheLeft") {showArrowMoveToTheLeft = false;  setState(() {});}
-      // if (message is String && message == "showVerticalBigLables")  {showVerticalBigLables = false; setState(() {});}
-      // msrTgl:1
-      // toggleIcnMsrBtn:false
-      // fromTheBegin:false
-      // isSwitched_32_64_128:
-      // mode_3264_or_64128:
-      // setDataSharedPref
-      // checkIfTCCareOutOfLimits
-      //
-      if (message is int) {}
-    });
+//
+   //  _receivePort!.listen((message) async{
+   //    if (message is SendPort) {
+   //      _sendPortToPlayer = message;
+   //      _sendDataToPlayer(allData);
+   //    }
+   // //
+   //    if (message is String) {
+   //      final parts = message.split(':');
+   //      final key = parts[0];
+   //      final value = parts.length > 1 ? parts[1] : null;
+   //      switch (key) {
+   //        case 'oneTraversingInstanceLaunched': oneTraversingInstanceLaunched = (value == 'true'); break;
+   //        case 'showArrowMoveToTheLeft': showArrowMoveToTheLeft = (value == 'true'); break;
+   //        case 'showVerticalBigLables': showVerticalBigLables = (value == 'true'); break;
+   //        case 'toggleIcnMsrBtn': toggleIcnMsrBtn = (value == 'true'); break;
+   //        case 'fromTheBegin': fromTheBegin = (value == 'true'); break;
+   //        case 'onTapCollisionPrevention_1': ntTblNtfrsList[25]['onTapCollisionPrevention_1'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'msrTgl': ntTblNtfrsList[5]['msrTgl'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'tableChangeCount128': ntTblNtfrsList[8]['tableChangeCount128'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'tableChangeCount64': ntTblNtfrsList[7]['tableChangeCount64'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'tableChangeCount32': ntTblNtfrsList[6]['tableChangeCount32'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'tableChangeCount': ntTblNtfrsList[4]['tableChangeCount'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'rangeStart': ntTblNtfrsList[0]['rangeStart'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'rangeEnd': ntTblNtfrsList[1]['rangeEnd'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'isSwitched_32_64_128': isSwitched_32_64_128 = int.tryParse(value ?? '32') ?? 32; break;
+   //        case 'playingBit': playingBit = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'startBit': ntTblNtfrsList[2]['startBit'] = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'mode_3264_or_64128': mode_3264_or_64128 = int.tryParse(value ?? '0') ?? 0; break;
+   //        case 'SETBUTTONSNOTIFIERREQUEST': buttonsNotifier.value = []; break;
+   //        case 'GETNOTIFIERREQUEST': _sendDataToPlayer(allData); break;
+   //        case 'SETNOTIFIERREQUEST': ntTblNotifier.value = ntTblNtfrsList; break;
+   //        case 'setDataSharedPref': setDataSharedPref(); break;
+   //        case 'checkIfTCCareOutOfLimits': checkIfTCCareOutOfLimits(); break;
+   //        case 'SETSTATE': setState(() {}); break;
+   //      } // end switch
+   //    } // end if
+   //    //
+   //    // if (message is String && message == "SETSTATE")                     {setState(() {});}
+   //    // if (message is String && message == "SETBUTTONSNOTIFIERREQUEST")    {setState(() {});}
+   //    // if (message is String && message == "onTapCollisionPrevention_1:1") {setState(() {});}
+   //    // if (message is String && message == "SETNOTIFIERREQUEST")           {setState(() {});}
+   //    // if (message is String && message == "GETNOTIFIERREQUEST")           {setState(() {});}
+   //    // if (message is String && message == "tableChangeCount128") {setState(() {});}
+   //    // if (message is String && message == "tableChangeCount64") {setState(() {});}
+   //    // if (message is String && message == "tableChangeCount32") {setState(() {});}
+   //    // if (message is String && message == "playingBit") {setState(() {});}
+   //    // if (message is String && message == "startBit") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // if (message is String && message == "SETSTATE") {setState(() {});}
+   //    // SETSTATE
+   //    // SETBUTTONSNOTIFIERREQUEST
+   //    // onTapCollisionPrevention_1:1
+   //    // SETNOTIFIERREQUEST
+   //    // GETNOTIFIERREQUEST
+   //    // tableChangeCount128:
+   //    // tableChangeCount64:
+   //    // tableChangeCount32:
+   //    // playingBit:
+   //    // startBit:
+   //    // tableChangeCount:
+   //    // rangeStart:
+   //    // rangeEnd:
+   //    // if (message is String && message == "oneTraversingInstanceLaunched") {oneTraversingInstanceLaunched = true; setState(() {});}
+   //    // if (message is String && message == "showArrowMoveToTheLeft") {showArrowMoveToTheLeft = false;  setState(() {});}
+   //    // if (message is String && message == "showVerticalBigLables")  {showVerticalBigLables = false; setState(() {});}
+   //    // msrTgl:1
+   //    // toggleIcnMsrBtn:false
+   //    // fromTheBegin:false
+   //    // isSwitched_32_64_128:
+   //    // mode_3264_or_64128:
+   //    // setDataSharedPref
+   //    // checkIfTCCareOutOfLimits
+   //    //
+   //    if (message is int) {}
+   //  });
   }
   void _stopPlayer() {
     _sendPortToPlayer?.send('STOP');
     _playerIsolate?.kill(priority: Isolate.immediate);
     _playerIsolate = null;
-    _receivePortFromPlayer?.close();
+    _receivePort?.close();
   }
   void _play() {                        // Start playback
     if (_sendPortToPlayer != null) {
@@ -1942,7 +1935,7 @@ if (Platform.isWindows) {
 //
 //
   Future listTraversal (int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
-    _setupPlayerIsolate(iStarts, iEnds, jBtnRelease, csvLst, notesByBit, rngExtend);  // see SEND INITIAL DATA
+    _sendDataNDcommandToISO(iStarts, iEnds, jBtnRelease, csvLst, notesByBit, rngExtend);  // see SEND INITIAL DATA
   } //end listTraversal
 //
 //
@@ -2203,7 +2196,7 @@ if (Platform.isWindows) {
     noteVolume = 0.9;
         // if(    !Platform.isLinux    ) {playerInitWithEmptyNote();} else {}  // initialize player and wait 0.8 seconds  // initialize player and wait 0.8 seconds
     await Future.delayed(Duration(milliseconds: 800)); // give time to initialize the player. // Map: See also SplayTreeMap (Sorted! HashMap), "Splay"!
-    if (playerMode==2) {audioPlayersMap = Map.fromEntries(audioPlayersMap.entries.toList()..sort((e1, e2) => e1.key.compareTo(e2.key)));} else {} // sorting HashMap (optional part of Win Memory Leak Resolve)
+ //   if (playerMode==2) {audioPlayersMap = Map.fromEntries(audioPlayersMap.entries.toList()..sort((e1, e2) => e1.key.compareTo(e2.key)));} else {} // sorting HashMap (optional part of Win Memory Leak Resolve)
     List jBtnRelease = [];                  // release the buttons of short-sounding notes a little earlier, List of numbers of short notes by one beat
  // List csvLst = List.from(dataF);  // needed! removing empty elements // again !!! creating csvLst, like in loadTagsFirst() func.    dataF  will be changed if csvLst canged!!! It is not a copy of the List!!!
     int notesByBit = 22;                                        // allways 22        if 21 string: 22         if 22 string: 22         For F2 Button To Work!
@@ -3278,6 +3271,14 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
 /////////////////////////////////////////////////////////////////////////
 //
     return MaterialApp(             // returning Material Application
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.noScaling,               // globally ignore system text scaling settings
+          ),
+          child: child!,
+        );
+      },
       //
       //////////////////////////// Background of Objects with no specified Colour ///////////
       //theme: ThemeData(primarySwatch: Colors.brown,), // theme Background     // you can uncomment it // Variant 1
