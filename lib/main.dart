@@ -169,9 +169,30 @@ Future<void> unpackAssetsToTemp() async {
 }
 //
 //
+class AppLifecycleObserver with WidgetsBindingObserver {
+  final void Function() onDetach;
+  AppLifecycleObserver({required this.onDetach});
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached) {
+      onDetach();
+    }
+  }
+}
+//
 void main(List<String> arguments) async{                        // with List of Win exe command line arguments  Windows
    WidgetsFlutterBinding.ensureInitialized();
-   // await unpackAssetsToTemp();
+//
+   WidgetsBinding.instance.addObserver(AppLifecycleObserver(
+     onDetach: () {
+       if (_sendPortToPlayer != null) {
+         _sendPortToPlayer!.send('shutdown');
+       }
+       _playerIsolate?.kill();
+     },
+   ));
+//
+  // await unpackAssetsToTemp();
   // await Future.delayed(const Duration(milliseconds: 100));
   // globalIsolateToken = RootIsolateToken.instance!;
   // await SoLoud.instance.init();
@@ -188,13 +209,13 @@ void main(List<String> arguments) async{                        // with List of 
   //runApp(MaterialApp(home: Jaliinstrument(),),);          // app runs here, class exemplar creates here (old, see: runApp)
   runApp(const MyApp());
   if (Platform.isWindows) {     // condtitional Build imitation (see also for "conditional Import"):
-    csvMode = 1;  playerMode = 2;  extension = 1;  mS =  10; // Windows---WAV--***EXE   (some notes stop sounding on Android, so for Android - another build option)                                    (if plays Slow, it's Power Save Mode of Notebook)
+    csvMode = 1;  playerMode = 2;  extension = 1;  mS =  2; // Windows---WAV--***EXE   (some notes stop sounding on Android, so for Android - another build option)                                    (if plays Slow, it's Power Save Mode of Notebook)
   }
   else if (Platform.isAndroid || Platform.isMacOS  || Platform.isIOS) {
-    csvMode = 1;  playerMode = 1;  extension = 1;  mS =  10; // Android,MacOS---WAV--***APK, MacOS***APP,***DMG, yes you can create DMG (like installer) via Node.js "create-dmg"      (if plays Slow, it's hash table mode, comment Windows)
+    csvMode = 1;  playerMode = 1;  extension = 1;  mS =  2; // Android,MacOS---WAV--***APK, MacOS***APP,***DMG, yes you can create DMG (like installer) via Node.js "create-dmg"      (if plays Slow, it's hash table mode, comment Windows)
   }
   else if (Platform.isLinux) {
-    csvMode = 1;  playerMode = 6;  extension = 1;  mS =  10;
+    csvMode = 1;  playerMode = 6;  extension = 1;  mS =  2;
   }
   else {}                       // works without setState()  ???
 } // end main()
@@ -256,7 +277,7 @@ class _JaliinstrumentState extends State<Jaliinstrument> with WidgetsBindingObse
  // ntTableCaptionTxt = await fullScreenSize.toString(); setState(() {});   // uncomment to see full screen size
     if(fullScreenSize.height > 1600) {
    // await DesktopWindow.setWindowSize(Size(1300,1600));                   // Setting Desktop Window Size // SEE: "windows/runner/main.cpp" to setUp OriginPoint
-      await DesktopWindow.setWindowSize(Size(800,1100));                   // Setting Desktop Window Size // SEE: "windows/runner/main.cpp" to setUp OriginPoint
+      await DesktopWindow.setWindowSize(Size(800,1200));                   // Setting Desktop Window Size // SEE: "windows/runner/main.cpp" to setUp OriginPoint
     } else {} //end if
     if(Platform.isLinux && fullScreenSize.height > 1400) {
       await DesktopWindow.setWindowSize(Size(720,1600));
@@ -411,7 +432,7 @@ void playNote(String note) {            // simple JS tonic
 //   if (playerMode==3) {loadSF2(midiValue);} else {flutterMidi.prepare(sf2: null);}  // flutter_midi: commented 3 of 6
 //////////////////////////////////////////////////////////////////////////////
     //getAndSetWindowSize();  // setting Window Size for Desktop App (Win, Linux, MacOS) toDo: NotWork! // SEE: "windows/runner/main.cpp" to setUp OriginPoint
-    if(tempSMonitor == '') {DesktopWindow.setWindowSize(Size(800,1100));
+    if(tempSMonitor == '') {DesktopWindow.setWindowSize(Size(800,1200));
       if(Platform.isLinux) {DesktopWindow.setWindowSize(Size(860,1600));} else {}
                             } else {} //end if  // Setting Desktop Window Size // SEE: "windows/runner/main.cpp" to setUp OriginPoint
     if (toShowVLbls && !wasShownVLblsOnce) {showBigLabelsShortly();  toShowVLbls = true;} else {showVerticalBigLables = false;}
@@ -912,10 +933,10 @@ void playNote(String note) {            // simple JS tonic
     ntTblNtfrsList = [...ntTblNotifier.value];
     if(ntTblNtfrsList[0]['rangeStart']?.round().remainder(nTcolS*2) == 0 && ntTblNtfrsList[1]['rangeEnd']?.round().remainder(nTcolS*4) == 0){
       fromTheBegin = false;
-      if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';} else {LoadCSVBtnTx='Load csv/tsv file, web';} //end if
+      if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';} else {LoadCSVBtnTx='Load csv/tsv file';} //end if
     } else {
       fromTheBegin = false;
-      if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';} else {LoadCSVBtnTx='Load csv/tsv file, web';} //end if
+      if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';} else {LoadCSVBtnTx='Load csv/tsv file';} //end if
     }
     if(ntTblNtfrsList[0]['rangeStart']?.round() == ntTblNtfrsList[1]['rangeEnd']?.round() && ntTblNtfrsList[1]['rangeEnd']?.round() != nTcolS*2 && ntTblNtfrsList[4]['tableChangeCount'] != 1){
       fromTheBegin = true;
@@ -923,7 +944,7 @@ void playNote(String note) {            // simple JS tonic
       showArrowMoveToTheLeft=false;
     } else {
       fromTheBegin = false;
-      if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';} else {LoadCSVBtnTx='Load csv/tsv file, web';} //end if
+      if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';} else {LoadCSVBtnTx='Load csv/tsv file';} //end if
     } //end if
     if(ntTblNtfrsList[0]['rangeStart']?.round() == ntTblNtfrsList[1]['rangeEnd']?.round() && ntTblNtfrsList[1]['rangeEnd']?.round() == nTcolS*4){
       clearRangeSharePref = true;
@@ -1139,7 +1160,7 @@ void playNote(String note) {            // simple JS tonic
 //
     setState(() {
       isLoadingCSV = false; // completely loading process finished // regardless of the result, the main thing is that the process is completed
-      fromTheBegin = false; // for Load CSV Button text ("start over (begin)" will change to "Load csv/tsv file, web")
+      fromTheBegin = false; // for Load CSV Button text ("start over (begin)" will change to "Load csv/tsv file")
     });
     await setDataSharedPref();
     fromTheBeginBySliderCoincidence();  // Suggestion to Start Over (begin) if slider values Match:
@@ -1266,7 +1287,7 @@ void playNote(String note) {            // simple JS tonic
       mode_3264_or_64128 = 3264;
       addNtTblNotifierStates();
       loading__3264_or_64128(); // CALL
-      if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';MonitorFile();} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';MonitorFile();} else {LoadCSVBtnTx='Load csv/tsv file, web';}
+      if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';MonitorFile();} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';MonitorFile();} else {LoadCSVBtnTx='Load csv/tsv file';}
       ntTblNtfrsList[0]['rangeStart'] = 0; ntTblNtfrsList[1]['rangeEnd'] = ntTblNtfrsList[21]['nTcolS']!*4;  // resetting Range Slider
       setState(() {});} else {}
       await setDataSharedPref();
@@ -1822,14 +1843,17 @@ if (Platform.isWindows) {
       csvLst is List ? csvLst : [],
       [notesByBit], [rngExtend], [toggleIcnMsrBtn],
       [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
-      [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value]
+      [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value],
+      [tempoCoeff]
     ];
     if (_sendPortToPlayer != null) {
         if (allData is List && allData.isNotEmpty) {
           _sendPortToPlayer!.send(allData);
         }
-      await _playerStream!.firstWhere((msg) => msg == "DATA_READY");      // first subscription and deletion of subscription, waiting for DATA_READY
+        // !!! blocking of Context until receive first subscription and deletion of subscription, waiting for DATA_READY:
+      await _playerStream!.firstWhere((msg) => msg == "DATA_READY");
       _sendPortToPlayer!.send("PLAY");
+        developer.log('PLAY command was sent');
     }
 //
    //  _receivePort!.listen((message) async{
@@ -1838,36 +1862,121 @@ if (Platform.isWindows) {
    //      _sendDataToPlayer(allData);
    //    }
    // //
-   //    if (message is String) {
-   //      final parts = message.split(':');
-   //      final key = parts[0];
-   //      final value = parts.length > 1 ? parts[1] : null;
-   //      switch (key) {
-   //        case 'oneTraversingInstanceLaunched': oneTraversingInstanceLaunched = (value == 'true'); break;
-   //        case 'showArrowMoveToTheLeft': showArrowMoveToTheLeft = (value == 'true'); break;
-   //        case 'showVerticalBigLables': showVerticalBigLables = (value == 'true'); break;
-   //        case 'toggleIcnMsrBtn': toggleIcnMsrBtn = (value == 'true'); break;
-   //        case 'fromTheBegin': fromTheBegin = (value == 'true'); break;
-   //        case 'onTapCollisionPrevention_1': ntTblNtfrsList[25]['onTapCollisionPrevention_1'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'msrTgl': ntTblNtfrsList[5]['msrTgl'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'tableChangeCount128': ntTblNtfrsList[8]['tableChangeCount128'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'tableChangeCount64': ntTblNtfrsList[7]['tableChangeCount64'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'tableChangeCount32': ntTblNtfrsList[6]['tableChangeCount32'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'tableChangeCount': ntTblNtfrsList[4]['tableChangeCount'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'rangeStart': ntTblNtfrsList[0]['rangeStart'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'rangeEnd': ntTblNtfrsList[1]['rangeEnd'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'isSwitched_32_64_128': isSwitched_32_64_128 = int.tryParse(value ?? '32') ?? 32; break;
-   //        case 'playingBit': playingBit = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'startBit': ntTblNtfrsList[2]['startBit'] = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'mode_3264_or_64128': mode_3264_or_64128 = int.tryParse(value ?? '0') ?? 0; break;
-   //        case 'SETBUTTONSNOTIFIERREQUEST': buttonsNotifier.value = []; break;
-   //        case 'GETNOTIFIERREQUEST': _sendDataToPlayer(allData); break;
-   //        case 'SETNOTIFIERREQUEST': ntTblNotifier.value = ntTblNtfrsList; break;
-   //        case 'setDataSharedPref': setDataSharedPref(); break;
-   //        case 'checkIfTCCareOutOfLimits': checkIfTCCareOutOfLimits(); break;
-   //        case 'SETSTATE': setState(() {}); break;
-   //      } // end switch
-   //    } // end if
+                _playerStream!.listen((message) {
+                  if (message is String) {
+                    final parts = message.split(':');
+                    final key = parts[0];
+                    final value = parts.length > 1 ? parts[1] : null;
+                    switch (key) {
+                      case 'oneTraversingInstanceLaunched':
+                        final newValue = (value == 'true');
+                        if (oneTraversingInstanceLaunched != newValue) {
+                          oneTraversingInstanceLaunched = newValue;
+                          setState(() {});
+                          developer.log('oneTraversingInstanceLaunched_received_setingState: $newValue');
+                        }
+                        break;
+                      case 'showArrowMoveToTheLeft':
+                        final newValue = (value == 'true');
+                        if (showArrowMoveToTheLeft != newValue) {
+                          showArrowMoveToTheLeft = newValue;
+                          setState(() {});
+                          developer.log('showArrowMoveToTheLeft_received_setingState: $newValue');
+                        }
+                        break;
+                      case 'showVerticalBigLables':
+                        final newValue = (value == 'true');
+                        if (showVerticalBigLables != newValue) {
+                          showVerticalBigLables = newValue;
+                          setState(() {});
+                          developer.log('showVerticalBigLables_received_setingState: $newValue');
+                        }
+                        break;
+                       case 'toggleIcnMsrBtn':
+                       final newValue = (value?.toLowerCase() == 'true');   // echo prevention
+                       if ( toggleIcnMsrBtn != newValue) {
+                         toggleIcnMsrBtn = newValue;
+                         setState(() {});
+                         developer.log('toggleIcnMsrBtn_received_setingState: $newValue');
+                       }
+                         break;
+                      case 'fromTheBegin':
+                        final newValue = (value?.toLowerCase() == 'true');   // echo prevention
+                        if ( fromTheBegin != newValue) {
+                          fromTheBegin = newValue;
+                          setState(() {});
+                          developer.log('fromTheBegin_received_setingState: $newValue');
+                        }
+                        break;
+                    //        case 'onTapCollisionPrevention_1': ntTblNtfrsList[25]['onTapCollisionPrevention_1'] = int.tryParse(value ?? '0') ?? 0; break;
+                       case 'msrTgl':
+                         final newValue = int.tryParse(value ?? '0') ?? 0;  // echo prevention
+                         if ( ntTblNtfrsList[5]['msrTgl'] != newValue) {
+                           ntTblNtfrsList[5]['msrTgl'] = newValue;
+                           developer.log('msrTgl_received: $newValue');
+                         }
+                         break;
+                         // final newValue = int.tryParse(value ?? '0') ?? 0;
+                         // if ( 00000 != newValue) {
+                         //   00000 = newValue;
+                         //   developer.log('00000_received: $newValue');
+                         // }
+                    //        case 'tableChangeCount128': ntTblNtfrsList[8]['tableChangeCount128'] = int.tryParse(value ?? '0') ?? 0; break;
+                    //        case 'tableChangeCount64': ntTblNtfrsList[7]['tableChangeCount64'] = int.tryParse(value ?? '0') ?? 0; break;
+                    //        case 'tableChangeCount32': ntTblNtfrsList[6]['tableChangeCount32'] = int.tryParse(value ?? '0') ?? 0; break;
+                    //        case 'tableChangeCount': ntTblNtfrsList[4]['tableChangeCount'] = int.tryParse(value ?? '0') ?? 0; break;
+                    //        case 'rangeStart': ntTblNtfrsList[0]['rangeStart'] = int.tryParse(value ?? '0') ?? 0; break;
+                    //        case 'rangeEnd': ntTblNtfrsList[1]['rangeEnd'] = int.tryParse(value ?? '0') ?? 0; break;
+                    //        case 'startBit': ntTblNtfrsList[2]['startBit'] = int.tryParse(value ?? '0') ?? 0; break;
+                      case 'playingBit':
+                              final newValue = int.tryParse(value ?? '0') ?? 0;
+                              if (ntTblNtfrsList[3]['playingBit'] != newValue) {
+                                ntTblNtfrsList[3]['playingBit'] = newValue;
+                                developer.log('playingBit_received: $newValue');
+                              }
+                              break;
+                           case 'isSwitched_32_64_128':
+                             isSwitched_32_64_128 = int.tryParse(value ?? '32') ?? 32;
+                             final newValue = int.tryParse(value ?? '0') ?? 0;
+                             if ( isSwitched_32_64_128 != newValue) {
+                               isSwitched_32_64_128 = newValue;
+                               developer.log('isSwitched_32_64_128_received: $newValue');
+                             }
+                             break;
+                           case 'mode_3264_or_64128':
+                             mode_3264_or_64128 = int.tryParse(value ?? '0') ?? 0;
+                             final newValue = int.tryParse(value ?? '0') ?? 0;
+                             if ( mode_3264_or_64128 != newValue) {
+                               mode_3264_or_64128 = newValue;
+                               developer.log('mode_3264_or_64128_received: $newValue');
+                             }
+                           break;
+                    //        case 'SETBUTTONSNOTIFIERREQUEST': buttonsNotifier.value = []; break;
+                       case 'GETNOTIFIERREQUEST':
+                         // ntTblNtfrsList = [...ntTblNotifier.value];
+                         ntTblNotifier.notifyListeners();
+                         // = [...cnslDelay1Ntfr.value];
+                         // = [...buttonsNotifier.value];
+                         allData = [
+                           [ntTblNtfrsList], [iStarts], [iEnds],
+                           jBtnRelease is List ? jBtnRelease : [],
+                           csvLst is List ? csvLst : [],
+                           [notesByBit], [rngExtend], [toggleIcnMsrBtn],
+                           [fromTheBegin], [shortOrLongNum], [selectedtuningNum],
+                           [noteVolume], [extension], [cnslDelay1Ntfr.value], [buttonsNotifier.value],
+                           [tempoCoeff]
+                         ];
+                             _sendPortToPlayer!.send(allData);
+                         developer.log('allData with updated Notifiers Values was sent');
+                        break;
+                    //        case 'SETNOTIFIERREQUEST': ntTblNotifier.value = ntTblNtfrsList; break;
+                    //        case 'setDataSharedPref': setDataSharedPref(); break;
+                    //        case 'checkIfTCCareOutOfLimits': checkIfTCCareOutOfLimits(); break;
+        //    case 'SETSTATE': setState(() {}); break;
+                    } // end switch
+                  } // end if
+                  ntTblNotifier.notifyListeners();      // Solution:   Notify Listeners instead of ntTblNotifier.value = ntTblNotifier !!!
+                });
    //    //
    //    // if (message is String && message == "SETSTATE")                     {setState(() {});}
    //    // if (message is String && message == "SETBUTTONSNOTIFIERREQUEST")    {setState(() {});}
@@ -1935,6 +2044,7 @@ if (Platform.isWindows) {
 //
 //
   Future listTraversal (int iStarts, int iEnds, List jBtnRelease, List csvLst, int notesByBit, bool rngExtend) async {
+    developer.log('CALLing _sendDataNDcommandToISO()');
     _sendDataNDcommandToISO(iStarts, iEnds, jBtnRelease, csvLst, notesByBit, rngExtend);  // see SEND INITIAL DATA
   } //end listTraversal
 //
@@ -2682,7 +2792,7 @@ if (Platform.isWindows) {
   hideControlsForScreenshotModeByLongPress() {
     hideControlsForScreenshotMode = !hideControlsForScreenshotMode;
     if(hideControlsForScreenshotMode) {
-                            DesktopWindow.setWindowSize(Size(800,1100));
+                            DesktopWindow.setWindowSize(Size(800,1200));
       if(Platform.isLinux) {DesktopWindow.setWindowSize(Size(430,1600));} else {}
     } else {}
     setState(() {});
@@ -3908,6 +4018,7 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                                                 (ntTblNtfrsList[1]['rangeEnd']!).toString(),
                                               ),
                                               onChanged: (RangeValues values1) {
+
                                                 cnslDelay1Ntfr.value = true;
                                                 // ntTblNtfrsList[0]['rangeStart'] = values1.start.round(); //works fine
                                                 // ntTblNtfrsList[1]['rangeEnd'] = values1.end.round();
@@ -3967,7 +4078,7 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                                         onChanged: (value) {
                                           setState(() {
                                             isSwitchedMonitorFile = value;  //print(isSwitchedMonitorFile);
-                                            if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';MonitorFile();} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';MonitorFile();} else {LoadCSVBtnTx='Load csv/tsv file, web';} //end if
+                                            if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';MonitorFile();} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';MonitorFile();} else {LoadCSVBtnTx='Load csv/tsv file';} //end if
                                           });
                                         },
                                         activeTrackColor: themeappLightDark==1 ? Colors.lightGreen[100] : invertCustom(Colors.lightGreen[100]!),
@@ -4042,7 +4153,7 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                                           label: Align(
                                             alignment: Alignment.centerRight,
                                           //child: Text(LoadCSVBtnTx, style: const TextStyle(fontSize: 18.0, color: Color(0xD9BC86D6)),),
-                                            child: Text(LoadCSVBtnTx, style:  TextStyle(fontSize: (double.tryParse(size.width.toString()))! * 0.0039 + (double.tryParse(size.height.toString()))! * 0.0018 + 13, color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6)!)),),
+                                            child: Text(LoadCSVBtnTx, style:  TextStyle(fontSize: (double.tryParse(size.width.toString()))! * 0.0039 + (double.tryParse(size.height.toString()))! * 0.0018 + 12, color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6)!)),),
                                           ),
                                         ),
                                       ),
@@ -4071,11 +4182,14 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                                         ntTblNotifier.value = ntTblNtfrsList;
                                         showVerticalBigLables = false; setState(() {});   // hide big labels, show buttons
                                         await playFromList (0);       // ASYNC added, AWAiT playFromList()  added
+                                        developer.log('CALLing playFromList()');
                                       } else {
                                         setState(() {toggleIcnMsrBtn = true;});
                                         ntTblNtfrsList = [...ntTblNotifier.value];
                                         ntTblNtfrsList[5]['msrTgl'] = 0;
                                         ntTblNotifier.value = ntTblNtfrsList;
+                                        _sendPortToPlayer!.send('STOP');
+                                        developer.log('Sent STOP command to the Player Isolate');
                                       } // end if
                                       setState(() {
                                         ntTblNtfrsList = [...ntTblNotifier.value];
@@ -4088,11 +4202,21 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                                       alignment: Alignment.centerRight,
                                       child: ValueListenableBuilder<List<Map<String, int>>> (     // Do not forget to write "return", otherwise you will get a red screen
                                           valueListenable: _JaliinstrumentState.ntTblNotifier,
-                                          builder: (context, ntTblNtfrsList, __) {  // Fo example: "Measures 001-054"  (measures numbers with Leading Zeroes). On most smartphones the button text will become two-line
-                                            measureBtnTx = 'Measures ${(ntTblNtfrsList[4]['tableChangeCount']!*2-1).toString().padLeft(3, '0')} - ${(maxNotEmptyPos / ntTblNtfrsList[21]['nTcolS']!).ceil().toString().padLeft(3, '0')}';
-                                          //return Text(measureBtnTx, style: TextStyle(fontSize: 20.0, color: Color(0xD9BC86D6)),);
-                                            return Text(measureBtnTx, style: TextStyle(fontSize: (double.tryParse(size.width.toString()))! * 0.0039 + (double.tryParse(size.height.toString()))! * 0.0018 + 15, color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6)!)),);
+                                          builder: (context, ntTblNtfrsList, __) {
+                                            // Fo example: "Measures 001-054" (measures numbers with Leading Zeroes).
+                                            // On most smartphones the button text will become two-line
+                                            return RichText(text: TextSpan(children: [
+                                              TextSpan(text: '${(ntTblNtfrsList[4]['tableChangeCount']!*2-1).toString().padLeft(3, '0')} - ${(maxNotEmptyPos / ntTblNtfrsList[21]['nTcolS']!).ceil().toString().padLeft(3, '0')}', style: TextStyle(
+                                                fontSize: (double.tryParse(size.width.toString()))! * 0.0039 + (double.tryParse(size.height.toString()))! * 0.0018 + 14, fontWeight: FontWeight.w500,
+                                                color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6)!),
+                                              )),
+                                              TextSpan(text: '  Measures  ', style: TextStyle(
+                                                fontSize: (double.tryParse(size.width.toString()))! * 0.0039 + (double.tryParse(size.height.toString()))! * 0.0018 + 10, fontWeight: FontWeight.w500,
+                                                color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6)!),
+                                              )),
+                                            ]));
                                           }
+
                                       ),
                                     ),
                                   ),
@@ -4165,6 +4289,7 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                                       label: crntSldrValT.toStringAsFixed(1), //toDo: add Log or Exp Label
                                       onChanged: isTempoSliderDisabled?null:(double valueS) {            // added slider-disable option, was   onChanged: (double valueS) {
                                             // if(    !Platform.isLinux    ) {playerInitWithEmptyNote();} else {}  // initialize player and wait 0.8 seconds
+                                        _sendPortToPlayer!.send(['sliderUpdate', crntSldrValT]);
                                         setState(() {
                                           crntSldrValT = valueS;
                                         }); //end setState
@@ -4209,13 +4334,13 @@ static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //st
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     child:
-                                    Text(
-                                      tempperformrsInfo,
-                                      style: TextStyle(fontFamily: 'Google_GHR', fontSize: 28.0, color: themeappLightDark==1 ? Colors.black87 : Colors.orange),
-                                      overflow: TextOverflow.fade,    // fade if it does not fit in width   (fading the end of the text)
-                                      //overflow: TextOverflow.clip,
-                                      softWrap: true,
-                                    ), //Google_GHR, see pubspec.yaml
+                                      Text(
+                                        tempperformrsInfo,
+                                        style: TextStyle(fontFamily: 'Google_GHR', fontSize: 28.0, color: themeappLightDark==1 ? Colors.black87 : Colors.orange),
+                                        overflow: TextOverflow.fade,    // fade if it does not fit in width   (fading the end of the text)
+                                        //overflow: TextOverflow.clip,
+                                        softWrap: true,
+                                      ), //Google_GHR, see pubspec.yaml
                                   ),
                                   //Text(tempperformrsInfo, style: TextStyle(fontStyle: FontStyle.normal)),
                                 ),
