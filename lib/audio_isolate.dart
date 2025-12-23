@@ -18,22 +18,23 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{     // Top-Level F
   sendPortToMain.send(receivePortFromMain.sendPort);
   receivePortFromMain.listen((message) async {                                                     // async is Here
 //
-    bool isParentAlive(SendPort sendPort)
-    {
-      try {
-        sendPort.send('ping');
-        return true;
-      } catch (e) {
-        return false;
-      }
-    }
-    Timer.periodic(Duration(seconds: 5), (timer) {
-      if (!isParentAlive(sendPortToMain)) {
-        developer.log('Parent isolate not responding - terminating child');
-        timer.cancel();
-        Isolate.exit(null);
-      }
-    });
+    //     bool isParentAlive(SendPort sendPort)
+    //     {
+    //       try {
+    //         sendPort.send('ping');
+    //         return true;
+    //       } catch (e) {
+    //         return false;
+    //       }
+    //     }
+    // Timer.periodic(Duration(seconds: 5), (timer) {
+    //   if (!isParentAlive(sendPortToMain)) {
+    //     developer.log('Parent isolate not responding - terminating child');
+    //     timer.cancel();
+    //     Isolate.exit(null);
+    //   }
+    // });
+//
     if (message == 'shutdown') {
       developer.log('Termination signal received - closing child isolate');
       Isolate.exit(null);
@@ -65,45 +66,44 @@ void playerIsolateEntryPoint (SendPort sendPortToMain) async{     // Top-Level F
       ISOcrntSldrValT = message[1];   // Directly from the Tempo Slider by User
     }
  //
-    if (message is List && message.length > 14) {     // don't forget to change the Length of List here !!!
-      ISOrangeStart = message[0][0][0]['rangeStart']; //  = = = = = = = = = = =  operator needed !!!   !!!   !!!
-      ISOrangeEnd = message[0][0][1]['rangeEnd'];     // It is the assignment operator that is required! It simulates an event listener
-      ISOstartBit = message[0][0][2]['startBit'];
-      ISOplayingBit = message[0][0][3]['playingBit'];
-      ISOtableChangeCount = message[0][0][4]['tableChangeCount'];
-      ISOmsrTgl = message[0][0][5]['msrTgl'];
-      ISOtableChangeCount32 = message[0][0][6]['tableChangeCount32'];
-      ISOtableChangeCount64 = message[0][0][7]['tableChangeCount64'];
-      ISOtableChangeCount128 = message[0][0][8]['tableChangeCount128'];
-      ISOisSwitched_32_64_128 = message[0][0][15]['listener_32_64_128'];
-      ISOmode_3264_or_64128 = message[0][0][16]['listener_3264_64128'];
-      ISOnTcolS = message[0][0][21]['nTcolS'];
-      ISOonTapCollisionPrevention_1 = message[0][0][25]['onTapCollisionPrevention_1'];
-      ISOonTapCollisionPrevention_2 = message[0][0][26]['onTapCollisionPrevention_2'];
-      ISOonTapCollisionPrevention_3 = message[0][0][27]['onTapCollisionPrevention_3'];
-      ISOiStarts = message[1][0];
-      ISOiEnds = message[2][0];
+    if (message is List && message.length >= 15) {
+      final NtState ntState = message[0];
+      ISOrangeStart = ntState.rangeStart;
+      ISOrangeEnd = ntState.rangeEnd;
+      ISOstartBit = ntState.startBit;
+      ISOplayingBit = ntState.playingBit;
+      ISOtableChangeCount = ntState.tableChangeCount;
+      ISOmsrTgl = ntState.msrTgl;
+      ISOtableChangeCount32 = ntState.tableChangeCount32;
+      ISOtableChangeCount64 = ntState.tableChangeCount64;
+      ISOtableChangeCount128 = ntState.tableChangeCount128;
+      ISOisSwitched_32_64_128 = ntState.listener3264128;
+      ISOmode_3264_or_64128 = ntState.listener326464128;
+      ISOnTcolS = ntState.nTcolS;
+      ISOonTapCollisionPrevention_1 = ntState.onTapCollision1;
+      ISOonTapCollisionPrevention_2 = ntState.onTapCollision2;
+      ISOonTapCollisionPrevention_3 = ntState.onTapCollision3;
+      ISOiStarts = message[1];
+      ISOiEnds = message[2];
       ISOjBtnRelease = message[3];
       ISOcsvLst = message[4];
-      ISOnotesByBit = message[5][0];
-      ISOrngExtend = message[6][0];
-      ISOtoggleIcnMsrBtn = message[7][0];
-      ISOfromTheBegin = message[8][0];
-      ISOshortOrLongNum = message[9][0];
-      ISOselectedtuningNum = message[10][0];
-      ISOnoteVolume = message[11][0];
-      ISOextension = message[12][0];
-      ISOcnslDelay1Ntfr = message[13][0];
-      ISObuttonsNotifier = message[14][0];
-      ISOtempoCoeff = message[15][0];
+      ISOnotesByBit = message[5];
+      ISOrngExtend = message[6];
+      ISOtoggleIcnMsrBtn = message[7];
+      ISOfromTheBegin = message[8];
+      ISOshortOrLongNum = message[9];
+      ISOselectedtuningNum = message[10];
+      ISOnoteVolume = message[11];
+      ISOextension = message[12];
+      ISOcnslDelay1Ntfr = message[13];
+      ISObuttonsNotifier = message[14];
+      ISOtempoCoeff = message[15];
       developer.log('allData received: OK');
-      // await preCacheAll(); // see if message is Map
-// await Future.delayed(Duration(milliseconds: 100));
-      portToMain.send("DATA_READY");                        // the Answer will be PLAY
+      portToMain.send("DATA_READY");
     }
+
     if (message == 'PLAY') {
-      isPlaying = false;
-      await Future.delayed(Duration(milliseconds: 100));
+      // await Future.delayed(Duration(milliseconds: 100));
       developer.log('PLAY command recieved');               // Ping-Pong from the Main after DATA_READY confirmation
       await ISOlistTraversal (cachedFilesPaths);
     }
@@ -269,12 +269,137 @@ playSound(int tuning, int number, int shortOrLong, double vol, int ext) async {
         //   isPlaying = false;
         // }
 //
+changeTableView(i,iStarts,dontChangeView) {  //changes view Only in UP direction, by "i"
+  ISOonTapCollisionPrevention_1 = 1;
+  // ntTblNotifier.value = ntTblNtfrsList;
+  //**********************************************************************//  "Assembler-style" variables names:
+  // ntTblNtfrsList = [...ntTblNotifier.value];
+  var TCC128 = ISOtableChangeCount128!;
+  var TCC064 = ISOtableChangeCount64!;
+  var TCC032 = ISOtableChangeCount32!;
+  var PBIT   = ISOplayingBit!;
+  var TCC    = ISOtableChangeCount!;
+  var SBIT   = ISOstartBit!;
+  var OisLEFT =  ISOrangeStart?.round().remainder(ISOnTcolS!*2);  // Range slider left Handle at the Left position
+  var OisRIGHT = ISOrangeEnd?.round().remainder(ISOnTcolS!*4);    // Range slider right Handle at the Right position
+  var rSTART = ISOrangeStart!;
+  var rEND = ISOrangeEnd!;
+  var ALLCOL = ISOnTcolS!*2;
+  var STARTr = rSTART?.round();
+  //**********************************************************************//
+  //
+  if(ISOisSwitched_32_64_128! ==128) {
+    TCC=TCC128;
+    if ((i - 1).remainder(ALLCOL) == 0 && i != 1 && TCC == 1 && STARTr != ALLCOL) {                                                			 // if (i - 1) !!!
+      TCC032 = TCC032 + 4;
+      TCC064 = TCC064 + 2;
+      TCC128 = TCC128 + 1;
+      TCC = TCC128;
+      iStarts = ((rSTART)/2).round() + 1 + (TCC - 1) * (ALLCOL);
+      SBIT = ((rSTART)/2).round() + ALLCOL + 0;
+      PBIT = iStarts;
+    } else if((i).remainder(ALLCOL) == 0 && TCC == 2 && (OisLEFT == 0 && OisRIGHT == 0 && STARTr != ALLCOL) && dontChangeView == false) { // if (i)
+      TCC032 = TCC032 + 4;
+      TCC064 = TCC064 + 2;
+      TCC128 = TCC128 + 1;
+      TCC = TCC128;
+      iStarts = ((rSTART)/2).round() + 0 + (TCC - 1) * (ALLCOL);
+      SBIT = iStarts + 0;
+      PBIT = iStarts + 0;
+    } else if((i).remainder(ALLCOL) == 0 && TCC > 2 && (OisLEFT == 0 && OisRIGHT == 0 && STARTr != ALLCOL) && dontChangeView == false) { // if (i)
+      TCC032 = TCC032 + 4;
+      TCC064 = TCC064 + 2;
+      TCC128 = TCC128 + 1;
+      TCC = TCC128;
+      iStarts = ((rSTART)/2).round() + 0 + (TCC - 1) * (ALLCOL);
+      SBIT = iStarts + 0;
+      PBIT = iStarts + 0;
+    } else {} //end if //
+  } else if(ISOisSwitched_32_64_128! ==64) {
+    TCC=TCC064;
+    if ((i - 1).remainder(ALLCOL) == 0 && i != 1 && TCC == 1 && STARTr != ALLCOL) {          						                                 // if (i - 1)  !!!
+      if ((TCC032).remainder(2) != 0) {TCC032 = TCC032 + 2;} else {TCC032 = TCC032 + 1;}
+      TCC064 = TCC064 + 1;
+      TCC = TCC064;
+      if ((TCC032).remainder(2) != 0 && TCC064.remainder(2) != 0) {TCC128 = TCC128 + 1;} else {}
+      iStarts = ((rSTART) / 2).round() + 1 + (TCC - 1) * (ALLCOL);
+      SBIT = ((rSTART) / 2).round() + ALLCOL + 0;
+      PBIT = iStarts;
+    } else if ((i).remainder(ALLCOL) == 0 && TCC == 2 && (OisLEFT == 0 && OisRIGHT == 0 && STARTr != ALLCOL) && dontChangeView == false) { // if (i) !!!
+      if ((TCC032).remainder(2) != 0) {TCC032 = TCC032 + 2;} else {TCC032 = TCC032 + 1;}
+      TCC064 = TCC064 + 1;
+      TCC = TCC064;
+      if (TCC032.remainder(2) != 0 && TCC064.remainder(2) != 0) {TCC128 = TCC128 + 1;} else {}
+      iStarts = ((rSTART) / 2).round() + 0 + (TCC - 1) * (ALLCOL);
+      SBIT = iStarts + 0;
+      PBIT = iStarts + 0;
+    } else if ((i).remainder(ALLCOL) == 0 && TCC > 2 && (OisLEFT == 0 && OisRIGHT == 0 && STARTr != ALLCOL) && dontChangeView == false) { // if (i) !!!
+      if ((TCC032).remainder(2) != 0) {TCC032 = TCC032 + 2;} else {TCC032 = TCC032 + 1;}
+      TCC064 = TCC064 + 1;
+      TCC = TCC064;
+      if (TCC032.remainder(2) != 0 && TCC064.remainder(2) != 0) {TCC128 = TCC128 + 1;} else {}
+      iStarts = ((rSTART) / 2).round() + 0 + (TCC - 1) * (ALLCOL);
+      SBIT = iStarts + 0;
+      PBIT = iStarts + 0;
+    } else {} //end if //
+  } else if (ISOisSwitched_32_64_128!  == 32) {
+    TCC=TCC032;
+    if ((i - 1).remainder(ALLCOL) == 0 && i != 1 && TCC == 1 && STARTr != ALLCOL) {         					                                 	  // if (i - 1)  !!!
+      TCC032 = TCC032 + 1;
+      TCC = TCC032;
+      if (TCC032.remainder(2) != 0 && TCC032 != 1) {TCC064 = TCC064 + 1;} else {}
+      if (TCC032.remainder(2) != 0 && TCC064.remainder(2) != 0 && TCC128.remainder(2) != 0) {TCC128 = TCC128 + 1;} else {}
+      iStarts = ((rSTART) / 2).round() + 1 + (TCC - 1) * (ALLCOL);
+      SBIT = ((rSTART) / 2).round() + ALLCOL + 0;
+      PBIT = iStarts;
+    } else if ((i).remainder(ALLCOL) == 0 && TCC == 2 && (OisLEFT == 0 && OisRIGHT == 0 && STARTr != ALLCOL) && dontChangeView == false) { // if (i) !!!
+      TCC032 = TCC032 + 1;
+      TCC = TCC032;
+      if (TCC032.remainder(2) != 0 && TCC032 != 1) {TCC064 = TCC064 + 1;} else {}
+      if (TCC032.remainder(2) != 0 && TCC064.remainder(2) != 0 && TCC128.remainder(2) != 0) {TCC128 = TCC128 + 1;} else {}
+      iStarts = ((rSTART) / 2).round() + 0 + (TCC - 1) * (ALLCOL);
+      SBIT = iStarts + 0;
+      PBIT = iStarts + 0;
+    } else if ((i).remainder(ALLCOL) == 0 && TCC > 2 && (OisLEFT == 0 && OisRIGHT == 0 && STARTr != ALLCOL) && dontChangeView == false) { // if (i) !!!
+      TCC032 = TCC032 + 1;
+      TCC = TCC032;
+      if (TCC032.remainder(2) != 0 && TCC032 != 1) {TCC064 = TCC064 + 1;} else {}
+      if (TCC032.remainder(2) != 0 && TCC064.remainder(2) != 0 && TCC128.remainder(2) != 0) {TCC128 = TCC128 + 1;} else {}
+      iStarts = ((rSTART) / 2).round() + 0 + (TCC - 1) * (ALLCOL);
+      SBIT = iStarts + 0;
+      PBIT = iStarts + 0;
+    } else {} //end if //
+  } else {} //end if (128 64 32)
 //
-bool isPlaying = false;
+//
+//**********************************************************************//
+  ISOtableChangeCount128 = TCC128;
+  ISOtableChangeCount64 = TCC064;
+  ISOtableChangeCount32 = TCC032;
+  ISOplayingBit = PBIT;
+  ISOstartBit = SBIT;
+  ISOtableChangeCount = TCC;
+  ISOrangeStart = rSTART;
+  ISOrangeEnd = rEND;
+  portToMain.send('tableChangeCount128:ISOtableChangeCount128');
+  portToMain.send('tableChangeCount64:ISOtableChangeCount64');
+  portToMain.send('tableChangeCount32:ISOtableChangeCount32');
+  portToMain.send('playingBit:ISOplayingBit');
+  portToMain.send('startBit:ISOstartBit');
+  portToMain.send('tableChangeCount:ISOtableChangeCount');
+  portToMain.send('rangeStart:ISOrangeStart');
+  portToMain.send('rangeEnd:ISOrangeEnd');
+  ////////////////////////////
+  // ntTblNotifier.notifyListeners();                                                      // Try notifyListeners()  !!!
+  // ntTblNotifier.value = ntTblNtfrsList;     // without setState()
+  ////////////////////////////
+//**********************************************************************//
+//
+  ISOonTapCollisionPrevention_1 = 0;
+  // ntTblNotifier.value = ntTblNtfrsList;
+} // end changeTableView()
 //
 Future<void> ISOlistTraversal (cachedFilesPaths) async {
-  if (isPlaying) { isPlaying = false; await Future.delayed(const Duration(milliseconds: 200)); }
-  isPlaying = true;
 //   //**********************************************************************//
   var PBIT     = ISOplayingBit!;
   var TCC      = ISOtableChangeCount!;
@@ -283,41 +408,40 @@ Future<void> ISOlistTraversal (cachedFilesPaths) async {
   var rSTART   = ISOrangeStart!;
   var rEND     = ISOrangeEnd!;
 //   //**********************************************************************//
-  portToMain.send('oneTraversingInstanceLaunched:true');                 // prevention of double- or multi- starts
-  portToMain.send('showArrowMoveToTheLeft:false');                       // hide Arrow "Move Left"
-  portToMain.send('showVerticalBigLables:false');                        // hide
+portToMain.send('oneTraversingInstanceLaunched:true');                 // prevention of double- or multi- starts
+portToMain.send('showArrowMoveToTheLeft:false');                       // hide Arrow "Move Left"
+portToMain.send('showVerticalBigLables:false');                        // hide
   bool showLocalFinger = false;
   int iEndsTmp;                                             // for dynamical shortening or extending range by slider
   bool shouldChangeView = true;                             // to not increase TCC when stopped by user
   if(TCC == 1) {iEndsTmp = ((rEND)/2).round() + 0;} else {iEndsTmp = ((rEND)/2).round() + 0 + (TCC - 1) * (ISOnTcolS!*2);}
-//   bool dontChangeView = true;     // don't change Current Page View with Current Numbers of Measures
-// sendPortToMain.send('GETNOTIFIERREQUEST');
+  bool dontChangeView = true;     // don't change Current Page View with Current Numbers of Measures
+portToMain.send('GETNOTIFIERREQUEST');
 //   ///////////////////////////////////
 //   // range Extends: if range was already set and now it extends by user using range slider
   if (ISOrngExtend == true) {
     PBIT = ISOiStarts;
-  portToMain.send('msrTgl:1');
+portToMain.send('msrTgl:1');
     ISOplayingBit = PBIT;
-// sendPortToMain.send('GETNOTIFIERREQUEST');
-    portToMain.send('toggleIcnMsrBtn:false');
+portToMain.send('GETNOTIFIERREQUEST');
+portToMain.send('toggleIcnMsrBtn:false');
   } else {}
 //   ///////////////////////////////////
   if (ISOiEnds > ISOcsvLst.length) {ISOiEnds = ISOcsvLst.length - 0;} else {} // end if
 //   //--------------------------------------- Main Cycle Loops Begin ---------------------------------------//
   for (int i = ISOiStarts; i < ISOiEnds; i++) { // traversing a list from start to finish //"mS" could be changed at any time by Slider
-    if (!isPlaying) break;
-// sendPortToMain.send('GETNOTIFIERREQUEST');
+portToMain.send('GETNOTIFIERREQUEST');
     TCC    = ISOtableChangeCount!;
     if(TCC == 1) {iEndsTmp = ((ISOrangeEnd!)/2).round() + 0;} else {iEndsTmp = ((ISOrangeEnd!)/2).round() + 0 + (TCC - 1) * (ISOnTcolS!*2);}  // use listenable value ISOrangeEnd!
         if((i==ISOiEnds-1) && OisLEFT == 0 && OisRIGHT == 0 && rSTART==0 && TCC > 1) {
-   portToMain.send('showArrowMoveToTheLeft:true');                       // show Arrow "Move Left"
+portToMain.send('showArrowMoveToTheLeft:true');                       // show Arrow "Move Left"
         } else {};      // show suggest to move to the left handle of the range slider to start from the beginning // fix rSTART==0  arrow Move Left appears at the middle Left Handle position
 //
 /////////////////////// Animation of Cursor Move
     PBIT       = i;  // animation of cursor move
     ISOplayingBit = PBIT;
     developer.log('ISOplayingBit: $ISOplayingBit');
-    portToMain.send('playingBit:' + ISOplayingBit.toString());
+portToMain.send('playingBit:' + ISOplayingBit.toString());
 /////////////////////// End Animation of Cursor Move
 //
 //
@@ -330,12 +454,12 @@ Future<void> ISOlistTraversal (cachedFilesPaths) async {
 //     range WAS all the way to the left and right (not set), and NOW it changed by user, then Stop:
     if((OisLEFT==0 && ISOrangeStart?.round().remainder(ISOnTcolS!*2) != 0) || (OisRIGHT==0 && ISOrangeEnd?.round().remainder(ISOnTcolS!*4) != 0)) {
       portToMain.send('toggleIcnMsrBtn:true');
-// portToMain.send('GETNOTIFIERREQUEST');
-      portToMain.send('msrTgl:0');
-// // portToMain.send('SETNOTIFIERREQUEST');
-// portToMain.send('GETNOTIFIERREQUEST');
-      portToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
-      portToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
+portToMain.send('GETNOTIFIERREQUEST');
+portToMain.send('msrTgl:0');
+portToMain.send('SETNOTIFIERREQUEST');
+portToMain.send('GETNOTIFIERREQUEST');
+portToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
+portToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
     }
     else {}
 //     ////////////////////////////////////////////////////////////////////
@@ -349,36 +473,35 @@ Future<void> ISOlistTraversal (cachedFilesPaths) async {
         ISOstartBit         = 0;
         ISOplayingBit       = 0;
         ISOtableChangeCount = 1;
-      portToMain.send('msrTgl:0');
-// sendPortToMain.send('tableChangeCount32:1');
-// sendPortToMain.send('tableChangeCount64:1');
-// sendPortToMain.send('tableChangeCount128:1');
-//  sendPortToMain.send('SETNOTIFIERREQUEST');
+portToMain.send('msrTgl:0');
+portToMain.send('tableChangeCount32:1');
+portToMain.send('tableChangeCount64:1');
+portToMain.send('tableChangeCount128:1');
+portToMain.send('SETNOTIFIERREQUEST');
       } else {
         i = ISOiEnds - 1; // exit from cycle = release, stop
         // So that there is no empty space at the cursor position after stopping:
         ISOplayingBit       = maxLength;
-// sendPortToMain.send('SETNOTIFIERREQUEST');
+portToMain.send('SETNOTIFIERREQUEST');
         //
       } // end if (start from the begin)
-      portToMain.send('toggleIcnMsrBtn:true');
-      portToMain.send('oneTraversingInstanceLaunched:false');
-// portToMain.send('GETNOTIFIERREQUEST');
-// sendPortToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
-// sendPortToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
-// portToMain.send('SETSTATE:DO');
+portToMain.send('toggleIcnMsrBtn:true');
+portToMain.send('oneTraversingInstanceLaunched:false');
+portToMain.send('GETNOTIFIERREQUEST');
+portToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
+portToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
+portToMain.send('SETSTATE:DO');
     } else {} // end exiting cycle (stop play), measure button pressed by user
 //     /////////////////////////////////////////////////////////////////////////////////////////
 //     ///////////////////////////////////////////////////////////////////////////////
 //     // if range dynamically changed by user (rangeEnd became less than playingBit):
-//     if ((iEndsTmp <= PBIT && (OisLEFT != 0 || OisRIGHT != 0))) {  // if range dynamically changed by user
-//       i = ISOiEnds - 1;    // exit from cycle = release, stop
-// // sendPortToMain.send('SETSTATE');
-//     } else {} // end if
+    if ((iEndsTmp <= PBIT && (OisLEFT != 0 || OisRIGHT != 0))) {  // if range dynamically changed by user
+      i = ISOiEnds - 1;    // exit from cycle = release, stop
+portToMain.send('SETSTATE:DO');
+    } else {} // end if
 //     //////////////////////////////////////////////////////////////////////////////
 //     //////////////////////////// Current Bit Traversal by "j", PlayingNotes ////////////////////////////////
     for (int j = 1; j <= ISOnotesByBit; j++) {     // (j) is number of playing string at the moment, and  shortOrLong - is variant of note's length // <=   <=   <=  less or equal
-      if (!isPlaying) break;
       if (ISOcsvLst[i][j] != "") {                 // for simple Lists Use "add" method!!          // ISOshortOrLongNum = 1 or 2 (Long|Short)  // You not to have to escape "asterisk", or "\" an "raw"
         if (ISOcsvLst[i][j].toString().contains("*")) {
           ISOshortOrLongNum = 2;
@@ -397,26 +520,27 @@ Future<void> ISOlistTraversal (cachedFilesPaths) async {
       }  // will be hear async parallel simultaneously sounds notes by one bit and aftertones of previous bits notes
     } // ind for (j)
 //     //////////////////////////// End Current Bit Traversal by "j", PlayingNotes ////////////////////////////
-// //       sendPortToMain.send('GETNOTIFIERREQUEST');
-//     if(ISOonTapCollisionPrevention_1 == 0 && ISOonTapCollisionPrevention_2 == 0 && ISOonTapCollisionPrevention_3 == 0) {
-//       if (shouldChangeView == true) {
-//         await changeTableView(i, ISOiStarts, dontChangeView);  // await added!
-//       } else {} // instead of 256 "ISOnTcolS!" replace to  "ntTblNtfrsList[21]['ISOnTcolS!']" . It seems impossible!
-//     } else {} //  end onTap collision prevention
-//     //
-//     //
-//     if(OisLEFT == 0 && OisRIGHT == 0 && rSTART?.round() != 2*ISOnTcolS!) {
-// // ISOiEnds = maxLength; // <======================================================================= !!!!!!!!!!!!!!!!!!!!!! Issue Is Here !!!
-//       // if TSV, prevention of ISOiEnds range error at the end of playback (2 of 2):
-//       if(wasTSVextDetected==true || googleCSVdetected==true) { // ??? TSV needs minus one element at the end (this is the difference from CSV):
-//         ISOiEnds = ISOcsvLst.length - 0;
-//       } else {
-//       } //end if TSV was detected
-//     } else {}; //end if
-//     if((i+1).remainder(ISOnTcolS!*2) == 0) {dontChangeView = false;} else {} //end if // don't change table view after manually toggle button play
-//     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//     ///////////////////////------End Change table View------////////////////////////
-//     //
+portToMain.send('GETNOTIFIERREQUEST');
+    if(ISOonTapCollisionPrevention_1 == 0 && ISOonTapCollisionPrevention_2 == 0 && ISOonTapCollisionPrevention_3 == 0) {
+      if (shouldChangeView == true) {
+// portToMain.send('CHANGETABLEVIEW:$i:$ISOiStarts:$dontChangeView');
+ await changeTableView(i, ISOiStarts, dontChangeView);  // await added!
+      } else {} // instead of 256 "ISOnTcolS!" replace to  "ntTblNtfrsList[21]['ISOnTcolS!']" . It seems impossible!
+    } else {} //  end onTap collision prevention
+//
+//
+    if(OisLEFT == 0 && OisRIGHT == 0 && rSTART?.round() != 2*ISOnTcolS!) {
+// ISOiEnds = maxLength; // <======================================================================= !!!!!!!!!!!!!!!!!!!!!! Issue Is Here !!!
+    // if TSV, prevention of ISOiEnds range error at the end of playback (2 of 2):
+      if(wasTSVextDetected==true || googleCSVdetected==true) { // ??? TSV needs minus one element at the end (this is the difference from CSV):
+        ISOiEnds = ISOcsvLst.length - 0;
+      } else {
+      } //end if TSV was detected
+    } else {}; //end if
+    if((i+1).remainder(ISOnTcolS!*2) == 0) {dontChangeView = false;} else {} //end if // don't change table view after manually toggle button play
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    ///////////////////////------End Change table View------////////////////////////
+    //
 //     //////////////////////// imitation of cancelable Delay: ///////////////// Eeach time calling function, because "ISOcrntSldrValT" may changed any time by user
 //       await Future.delayed(Duration(milliseconds: 80));    // test
 //     // if(ISOtempoCoeff<=1.8) { // Do cancelable delay:
@@ -451,43 +575,39 @@ Future<void> ISOlistTraversal (cachedFilesPaths) async {
 //     ////////////////////// End imitation of cancelable Delay//////////////////                            // toDo: setState() N4
 //     //
 //     ////////////////////// Completion naturally //////////////////////
-//     if (i == ISOiEnds - 1) {      // completion naturally upon reaching ISOiEnds OR at the end of the List
-//       shouldChangeView = false;
-//       // print('ends naturally');
-// // sendPortToMain.send('GETNOTIFIERREQUEST');
-//       if(ISOfromTheBegin) {
-//         ISOstartBit         = 0;
-//         ISOplayingBit       = 0;
-//         ISOtableChangeCount = 1;
-// // sendPortToMain.send('msrTgl:0');
-// // sendPortToMain.send('tableChangeCount32:1');
-// // sendPortToMain.send('tableChangeCount64:1');
-// // sendPortToMain.send('tableChangeCount128:1');
-//       } else {                          // completion naturally at the end of the selected Range
-// // sendPortToMain.send('msrTgl:0');
-//         //                           // So that there is no empty space at the cursor position after stopping:
-//         ISOplayingBit       = maxLength;
-// // sendPortToMain.send('SETNOTIFIERREQUEST');
-//         //
-//       } //end if(start from the begin)
-// // sendPortToMain.send('toggleIcnMsrBtn:true');
-// // sendPortToMain.send('oneTraversingInstanceLaunched:false');
-// // sendPortToMain.send('SETSTATE');
-// // sendPortToMain.send('SETNOTIFIERREQUEST');
-// // sendPortToMain.send('GETNOTIFIERREQUEST');
-// // sendPortToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
-// // sendPortToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
-// // sendPortToMain.send('SETSTATE');
-//     } // end if(): setting Icon on Measure Button to "Play" (default)
+    if (i == ISOiEnds - 1) {            // completion naturally upon reaching ISOiEnds OR at the end of the List
+      shouldChangeView = false;
+portToMain.send('GETNOTIFIERREQUEST');
+      if(ISOfromTheBegin) {
+        ISOstartBit         = 0;
+        ISOplayingBit       = 0;
+        ISOtableChangeCount = 1;
+portToMain.send('msrTgl:0');
+portToMain.send('tableChangeCount32:1');
+portToMain.send('tableChangeCount64:1');
+portToMain.send('tableChangeCount128:1');
+      } else {                          // completion naturally at the end of the selected Range
+portToMain.send('msrTgl:0');
+        // So that there is no empty space at the cursor position after stopping:
+        ISOplayingBit       = maxLength;
+portToMain.send('SETNOTIFIERREQUEST');
+        //
+      } //end if(start from the begin)
+portToMain.send('toggleIcnMsrBtn:true');
+portToMain.send('oneTraversingInstanceLaunched:false');
+portToMain.send('SETSTATE:DO');
+portToMain.send('SETNOTIFIERREQUEST');
+portToMain.send('GETNOTIFIERREQUEST');
+portToMain.send('isSwitched_32_64_128:' + ISOisSwitched_32_64_128.toString());
+portToMain.send('mode_3264_or_64128:' + ISOmode_3264_or_64128.toString());
+portToMain.send('SETSTATE:DO');
+    } // end if(): setting Icon on Measure Button to "Play" (default)
 //     /////////////////// End Completion naturally /////////////////////
-//     //await setDataSharedPref();   // CALL
-// // sendPortToMain.send('setDataSharedPref');
-  } // end for (i)                                        // "oneTraversingInstanceLaunched" is a Double-start prevention
-//   //await checkIfTCCareOutOfLimits();  // if previous session ends incorrectly or table change view ends incorrectly
-// // sendPortToMain.send('checkIfTCCareOutOfLimits');
-// // sendPortToMain.send('oneTraversingInstanceLaunched:false');  // after additional list traversal it could be "true", so setting it to "false" at the end
-// // sendPortToMain.send('SETSTATE');
-// ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  isPlaying = false;
+portToMain.send('SETDATASHAREDPREF:DO');  // await CALL
+  } // end for (i)                                         // "oneTraversingInstanceLaunched" is a Double-start prevention
+// // portToMain.send('checkIfTCCareOutOfLimits');         // if previous session ends incorrectly or table change view ends incorrectly
+portToMain.send('oneTraversingInstanceLaunched:false');  // after additional list traversal it could be "true", so setting it to "false" at the end
+portToMain.send('SETSTATE:DO');
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  } // end ISOlistTraversal()
 //
