@@ -1529,78 +1529,42 @@ if (Platform.isWindows) {
 //                                        // FOR INFORMATION: ALSO LOOK FOR DART-PACKAGE " MULTI - VALUE LISTENABLE BUILDER"
   void addNtTblNotifierStates() {         // DO NOT USE SETSTATE() AT ALL WHILE PLAYBACK, USE VALUE NOTIFIER. IT GIVES VERY SMOOTH BEAT DURATION. IT'S VERY USEFUL !!!
     switchRangeEndDependsColsNumb();
-            // ADDING LISTENER before EVERY usage, otherwise the values IN WIDGET will not change!
-    //////////////////////////////////////////////////// !!! To prevent "Null Check Operator on Null Value", numbers of Elements are very important !
-    // ntTblNtfrsList.add({'rangeStart' :        0});    //[0]: Range Slider Selection Range (Start 0,2,4...64 End)
-    // ntTblNtfrsList.add({'rangeEnd'   :   rngEnd});    //[1]: End of selection Range = 64
-    nt$.value.copyWith(rangeEnd: rngEnd);
-    // ntTblNtfrsList.add({'startBit' :          0});    //[2]: From Where To Start a new View (first bit without shifting), (upper left) for current table view
-    // ntTblNtfrsList.add({'playingBit' :        0});    //[3]: Bit Under Cursor
-    // ntTblNtfrsList.add({'tableChangeCount' :  1});    //[4]: Counts every table view change, switch to 'Next View'
-    // ntTblNtfrsList.add({'msrTgl' :            0});    //[5]: Measure button Toggle instead of setState()
-    // ntTblNtfrsList.add({'tableChangeCount32' :1});    //[6]: Counts every table view change 32
-    // ntTblNtfrsList.add({'tableChangeCount64' :1});    //[7]: Counts every table view change 64
-    // ntTblNtfrsList.add({'tableChangeCount128':1});    //[8]: Counts every table view change 128
-    // ntTblNtfrsList.add({'rangeStart32bak':                 0});    //[9]: Saving RangeStart view 32
+    ////////////////////////////////////////////////////
+    nt$.value = nt$.value.copyWith(rangeEnd: rngEnd); // [1]: End of selection Range = 64
     switch (isSwitched_32_64_128) {
       case 128:
-        nt$.value.copyWith(rangeEnd32bak: (rngEnd/4).round());
-        nt$.value.copyWith(rangeEnd64bak: (rngEnd/2).round());
-        nt$.value.copyWith(rangeEnd128bak: rngEnd);
-    //     ntTblNtfrsList.add({'rangeEnd32bak':  (rngEnd/4).round()});    //[10]:Saving RangeEnd   view 128
-    //     ntTblNtfrsList.add({'rangeStart64bak':                 0});    //[11]:Saving RangeStart view 64
-    //     ntTblNtfrsList.add({'rangeEnd64bak':  (rngEnd/2).round()});    //[12]:Saving RangeEnd   view 64
-    //     ntTblNtfrsList.add({'rangeStart128bak':                0});    //[13]:Saving RangeStart view 128
-    //     ntTblNtfrsList.add({'rangeEnd128bak':             rngEnd});    //[14]:Saving RangeEnd   view 128
+        nt$.value = nt$.value.copyWith(
+            rangeEnd32bak: (rngEnd/4).round(), // [10]: Saving RangeEnd view 32
+            rangeEnd64bak: (rngEnd/2).round(), // [12]: Saving RangeEnd view 64
+            rangeEnd128bak: rngEnd // [14]: Saving RangeEnd view 128
+        );
         break;
-      case  64:
-        nt$.value.copyWith(rangeEnd32bak: (rngEnd/2).round());
-        nt$.value.copyWith(rangeEnd64bak: rngEnd);
-        nt$.value.copyWith(rangeEnd128bak: 2*rngEnd);
-    //     ntTblNtfrsList.add({'rangeEnd32bak':  (rngEnd/2).round()});    //[10]:Saving RangeEnd   view 32
-    //     ntTblNtfrsList.add({'rangeStart64bak':                 0});    //[11]:Saving RangeStart view 64
-    //     ntTblNtfrsList.add({'rangeEnd64bak':              rngEnd});    //[12]:Saving RangeEnd   view 64
-    //     ntTblNtfrsList.add({'rangeStart128bak':                0});    //[13]:Saving RangeStart view 128
-    //     ntTblNtfrsList.add({'rangeEnd128bak':           2*rngEnd});    //[14]:Saving RangeEnd   view 128
+      case 64:
+        nt$.value = nt$.value.copyWith(
+            rangeEnd32bak: (rngEnd/2).round(), // [10]: Saving RangeEnd view 32
+            rangeEnd64bak: rngEnd, // [12]: Saving RangeEnd view 64
+            rangeEnd128bak: 2*rngEnd // [14]: Saving RangeEnd view 128
+        );
         break;
-      case  32:
-        nt$.value.copyWith(rangeEnd32bak: (rngEnd).round());
-        nt$.value.copyWith(rangeEnd64bak: 2*rngEnd);
-        nt$.value.copyWith(rangeEnd128bak: 4*rngEnd);
-    //     ntTblNtfrsList.add({'rangeEnd32bak':    (rngEnd).round()});    //[10]:Saving RangeEnd   view 128
-    //     ntTblNtfrsList.add({'rangeStart64bak':                 0});    //[11]:Saving RangeStart view 64
-    //     ntTblNtfrsList.add({'rangeEnd64bak':            2*rngEnd});    //[12]:Saving RangeEnd   view 64
-    //     ntTblNtfrsList.add({'rangeStart128bak':                0});    //[13]:Saving RangeStart view 128
-    //     ntTblNtfrsList.add({'rangeEnd128bak':           4*rngEnd});    //[14]:Saving RangeEnd   view 128
+      case 32:
+        nt$.value = nt$.value.copyWith(
+            rangeEnd32bak: (rngEnd).round(), // [10]: Saving RangeEnd view 32
+            rangeEnd64bak: 2*rngEnd, // [12]: Saving RangeEnd view 64
+            rangeEnd128bak: 4*rngEnd // [14]: Saving RangeEnd view 128
+        );
         break;
     } // end switch
-    nt$.value.copyWith(listener3264128: isSwitched_32_64_128);
-    nt$.value.copyWith(listener326464128: mode_3264_or_64128);
-    // ntTblNtfrsList.add({'listener_32_64_128' :   isSwitched_32_64_128});         //[15]:  // try to prevent randomly incorrect view change after tables both ontap
-    // ntTblNtfrsList.add({'listener_3264_64128' :    mode_3264_or_64128});         //[16]:  // try to prevent randomly incorrect view change after tables both ontap
-    // ntTblNtfrsList.add({'Reserved_17' :           0});         //[17]:  // try to prevent randomly incorrect view change after tables both ontap
-    // ntTblNtfrsList.add({'Reserved_18' :           0});         //[18]:  // try to prevent randomly incorrect view change after tables both ontap
-    // ntTblNtfrsList.add({'Reserved_19' :           0});         //[19]:  // try to prevent randomly incorrect view change after tables both ontap
-    // //
-    nt$.value.copyWith(rngEndSlider: rngEnd);
-    nt$.value.copyWith(nTcolS: nTcolS);
-    // ntTblNtfrsList.add({'rngEndSlider'   :   rngEnd});    //[20]: // Solution to TEMPO and BEAT DURATION!, but try to prevent randomly incorrect view change after tables both ontap: nt$.value.rngEndSlider
-    // ntTblNtfrsList.add({'nTcolS'   :   nTcolS});          //[21]: // Solution to TEMPO and BEAT DURATION!, try to prevent randomly incorrect view change after tables both ontap: nt$.value.nTcolS
-    // ntTblNtfrsList.add({'ntTableCaptionTxt_0_variant'   :   1});          //[22]  // Text of the first caption over the table '〇⬤〇'
-    // ntTblNtfrsList.add({'ntTableCaptionTxt_1_variant'   :   1});          //[23]  // (second caption over the table)
-    nt$.value.copyWith(captionVariant0: 1);              //  setting 22 element  to int 1    NULL CHECK ON NULL VALUE  resolve
-    nt$.value.copyWith(captionVariant1: 1);              //  setting 23 element  to int 1    '〇⬤〇'  64
-    // ntTblNtfrsList.add({'counterPlayerLinux'   :   0});                   //[24] index, counter, Player Number for Linux (to prevent multiple volume regulators)
-    nt$.value.copyWith(counterPlayerLinux: 0);                       //  setting 24 element  to int 0
-    // ntTblNtfrsList.add({'onTapCollisionPrevention_1'   :   0});           //[25]  // onTap collision prevention while playback: inside changetableview() 1 of 3
-    // ntTblNtfrsList.add({'onTapCollisionPrevention_2'   :   0});           //[26]  // onTap collision prevention while playback: inside tablesBothOnTap() 2 of 3
-    // ntTblNtfrsList.add({'onTapCollisionPrevention_3'   :   0});           //[27]  // onTap collision prevention while playback: inside tablesBothOnTap() 3 of 3
-    // nt$.value = ntTblNtfrsList;                                 // without this assingment you will give red screen in widget
-  //
-    strTxtNotifierList.clear();               // strTxtNotifierList is a Global
+    nt$.value = nt$.value.copyWith(listener3264128: isSwitched_32_64_128); // [15]: try to prevent randomly incorrect view change after tables both ontap
+    nt$.value = nt$.value.copyWith(listener326464128: mode_3264_or_64128); // [16]: try to prevent randomly incorrect view change after tables both ontap
+    nt$.value = nt$.value.copyWith(rngEndSlider: rngEnd); // [20]: Solution to TEMPO and BEAT DURATION!
+    nt$.value = nt$.value.copyWith(nTcolS: nTcolS); // [21]: Solution to TEMPO and BEAT DURATION!
+    nt$.value = nt$.value.copyWith(captionVariant0: 1); // [22]: Text of the first caption over the table '〇⬤〇'
+    nt$.value = nt$.value.copyWith(captionVariant1: 1); // [23]: (second caption over the table)
+    nt$.value = nt$.value.copyWith(counterPlayerLinux: 0); // [24]: index, counter, Player Number for Linux (to prevent multiple volume regulators)
+    strTxtNotifierList.clear(); // strTxtNotifierList is a Global
     strTxtNotifierList = [...strTxtNotifier.value];
-    strTxtNotifierList.add({'ntTableCaptionTxt' : ''});                   // strTxtNotifierList[0]['ntTableCaptionTxt']
-    strTxtNotifier.value = strTxtNotifierList;                            // without this assingment you will give red screen in widget
+    strTxtNotifierList.add({'ntTableCaptionTxt': ''}); // strTxtNotifierList[0]['ntTableCaptionTxt']
+    strTxtNotifier.value = strTxtNotifierList; // without this assignment you will give red screen in widget
   //
   } // END OF VERY USEFUL VALUE NOTIFIER AND BUILDER ELEMENTS FIRST ADDING
 //
