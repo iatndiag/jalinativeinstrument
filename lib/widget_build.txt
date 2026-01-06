@@ -1,0 +1,1406 @@
+  themeappLightDarkChange(bool isLongPressed){    // Application Theme:  1 = light   2 = dark          See invertCustom() function
+    if(themeappLightDark==1) {
+      if(isLongPressed) {themeappLightDark = 2; int i=0; for (Color colorEl in keysColorsList) {keysColorsList[i] =  invertCustom(colorEl); i++;}
+      } else {fillDefaultColorsList();}
+    } else {
+      if(isLongPressed) {
+        themeappLightDark = 1; fillDefaultColorsList();
+      } else {fillDefaultColorsList(); int i=0; for (Color colorEl in keysColorsList) {keysColorsList[i] =  invertCustom(colorEl); i++;}}
+    };
+    updateSystemNavigationBar(themeappLightDark);
+    setState(() {});
+    setAppSettingsSharedPref();
+  } // end themeappLightDarkChange()
+//
+  static  Color invertCustom(Color color) {   // Change Theme Light-Dark      //static keyword to make this function accessible outside of this class, see Custom Paint
+    final r = 255 - color.red;
+    final g = 255 - color.green;
+    final b = 255 - color.blue;
+    return Color.fromARGB((color.opacity * 255).round(), r, g, b);
+  }
+//
+  late final Color cYellow700 = Colors.yellow[700]!;
+  late final Color cYellow700Inv = invertCustom(Colors.yellow[700]!);
+  late final Color cOrange600 = Colors.orange[600]!;
+  late final Color cOrange600Inv = invertCustom(Colors.orange[600]!);
+  late final Color cLime100 = Colors.lime[100]!;
+  late final Color cLime100Inv = invertCustom(Colors.lime[100]!);
+  late final Color cLime200 = Colors.lime[200]!;
+  late final Color cLime200Inv = invertCustom(Colors.lime[200]!);
+  late final Color cLime50 = Colors.lime[50]!;
+  late final Color cLime50Inv = invertCustom(Colors.lime[50]!);
+  late final Color cAmber50 = Colors.amber[50]!;
+  late final Color cAmber50Inv = invertCustom(Colors.amber[50]!);
+//
+  @override
+  Widget build(BuildContext context) {            // Widget Creating
+//
+    var size = MediaQuery.of(context).size;       // Getting parameters of context Widget (Height, Width, etc)
+//
+    double fontSize_i = 16.0;                     // font-size of text "Info"
+    ////   fontSize = 18.0; fontSizeCnt = 16.0;
+    fontSize = size.width * 0.001 + size.height * 0.0020 + 16.0; // font-size of KEY-BUTTONS and CENTS of tuning
+    fontSizeCnt = size.width * 0.001 + size.height * 0.0015 + 13.0;
+    //double heightSupportingSize = 5;  // default value is (4), supports Height of each cell of the both tables
+    //double heightSupportingSize = 8;
+    double? heightSupportingSize;       // in keeps small '1's in the cells, they colors as the same as background so you dont see them
+    double? dependsOnMediaWidthSize;    // font-Size  A  B  C  e g f
+    // double? posYdependsOnMediaSize;     // letters-shift
+    // double? posXdependsOnMediaSize;
+    // double? widthDependsOnMediaWIDTH;    // width of Orange Note (it have point on it and letter above it)
+    //dropDownXdependsOnMediaSize = -(double.tryParse(size.width.toString()))! * 0.020;
+    final double sw1 = size.width;
+    final double sh1 = size.height;
+    heightSupportingSize = sh1 * 0.0065; // height supporting font for table row
+//
+//     switch (ntLtn[15]) {                // linear dependence of font size on device screen width and XY-shift on device screen width:
+//       case 32:
+//         dependsOnMediaWidthSize = sw1 * 0.021 + 6; // font-Size A B C e g f in Notation Table
+//         posYdependsOnMediaSize = -sw1 * 0.035 - (1800 - sw1) * 0.003; // increase: Up
+//         posXdependsOnMediaSize = -sw1 * 0.012 - (2700 - sw1) * 0.001; // increase: Left
+//         widthDependsOnMediaWIDTH = sw1 * 0.072;
+//         break;
+//       case 64:
+//         dependsOnMediaWidthSize = sw1 * 0.015 + 6;
+//         posYdependsOnMediaSize = -sw1 * 0.030 - (1800 - sw1) * 0.003; // increase: Up
+//         posXdependsOnMediaSize = -sw1 * 0.009 - (2700 - sw1) * 0.001; // increase: Left
+//         widthDependsOnMediaWIDTH = sw1 * 0.042;
+//         break;
+//       case 128:
+//         dependsOnMediaWidthSize = sw1 * 0.007 + 6;
+//         posYdependsOnMediaSize = -sw1 * 0.022 - (1800 - sw1) * 0.003; // increase: Up
+//         posXdependsOnMediaSize = -sw1 * 0.004 - (2700 - sw1) * 0.001; // increase: Left
+//         widthDependsOnMediaWIDTH = sw1 * 0.042;
+//         break;
+//       default:
+//         dependsOnMediaWidthSize = sw1 * 0.015 + 6;
+//         posYdependsOnMediaSize = -sw1 * 0.030 - (1800 - sw1) * 0.003; // increase: Up
+//         posXdependsOnMediaSize = -sw1 * 0.009 - (2700 - sw1) * 0.001; // increase: Left
+//         widthDependsOnMediaWIDTH = sw1 * 0.042;
+//     } // wide screen, correction
+//
+//// linear dependence of font size on device screen width and XY-shift on device screen width:
+    (double, double, double, double) calculateMyMetrics(double sw1, int mode) {
+      double fontSize;
+      double posY;
+      double posX;
+      double width;
+      double shiftY = (1800 - sw1) * 0.003;
+      double shiftX = (2700 - sw1) * 0.001;
+      switch (mode) {
+        case 32:
+          fontSize = sw1 * 0.021 + 6;   // font-Size A B C e g f in Notation Table
+          posY = -sw1 * 0.035 - shiftY; // increase: Up             // letters-shift
+          posX = -sw1 * 0.012 - shiftX; // increase: Left
+          width = sw1 * 0.072;
+        case 128:
+          fontSize = sw1 * 0.007 + 6;
+          posY = -sw1 * 0.022 - shiftY; // increase: Up
+          posX = -sw1 * 0.004 - shiftX; // increase: Left
+          width = sw1 * 0.042;
+        case 64:
+        default:
+          fontSize = sw1 * 0.015 + 6;
+          posY = -sw1 * 0.030 - shiftY; // increase: Up
+          posX = -sw1 * 0.009 - shiftX; // increase: Left
+          width = sw1 * 0.042;
+      }
+      return (fontSize, posY, posX, width);
+    }
+//
+//  Expanded Widget Class Used for Repeated Code to fill-up the column or the row:
+    Expanded buildKeyLeft   (int soundNum, Color color, double fontSize, bool prsdBool, bool showLocalFingering){
+      dynamic keyTuning = visualMarks (selectedtuningNum);
+      // var buttonText = keyTuning[soundNum].values.elementAt(3) + '      ' + keyTuning[soundNum].values.elementAt(1); // Freq, Note
+      var buttonText = keyTuning[soundNum].values.elementAt(1);                                                         // Note
+      var buttonTextCent = keyTuning[soundNum].values.elementAt(2);
+      var freqTextPrecisely = keyTuning[soundNum].values.elementAt(3).toString(); //frequency Precisely (machine heads)
+      var freqTextRoughly = "";
+      if (keyTuning[soundNum].values.elementAt(3) != "") freqTextRoughly = (double.parse((keyTuning[soundNum].values.elementAt(3)))).toStringAsFixed(1); //frequency Roughly (wooden pegs)
+      var DmmTextVariant1 = ""; var DmmTextVariant2 = ""; var lbTextForVariant2 = "";
+      if (stringsDiamMapVariant1[soundNum] != "") DmmTextVariant1 = stringsDiamMapVariant1[soundNum].toString(); // strings diameter, mm
+      if (stringsDiamMapVariant2[soundNum] != "") DmmTextVariant2 = stringsDiamMapVariant2[soundNum].toString(); // strings diameter, mm
+      if (stringsLbMapToVariant2[soundNum] != "") lbTextForVariant2 = stringsLbMapToVariant2[soundNum].toString(); // strings load in lbs
+      if (soundNum !=23 && showVerticalBigLables == false) {
+        return
+          Expanded(
+            child:
+            InkWell (
+              child: Stack(      // stack is only to show Fingering under the button Layer   // Stack is like Z-Layers in CSS or transparent Layers in Photoshop. It's a Stack
+                children: <Widget>[
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      foregroundColor: color,
+                      backgroundColor: prsdBool ?  themeappLightDark==1 ? Colors.orange[100] : invertCustom(Colors.orange[100]!) : themeappLightDark==1 ? Colors.orange[50] : invertCustom(Colors.orange[50]!),
+                      elevation: 3,  //visual effect for button
+                    ),
+                    onPressed: (){
+                      playSound(selectedtuningNum,soundNum,shortOrLongNum,noteVolume,extension);
+                      //harmonicFunctions (soundNum); //Complexity calculates well
+                    },
+                    onLongPress: () {
+                      themeappLightDarkChange(true);
+                    },
+                    child:
+                    InkWell(
+                      child:
+                      MouseRegion(          //restore Win cursor "hand clicks button"
+                        cursor: SystemMouseCursors.click,
+                        child:
+                        Stack(
+                          alignment: Alignment.center,      // is Solution how to Align center, do not need to change base point of CustomPainter or it's width
+                          children: <Widget>[
+                            OverflowBox(
+                              maxHeight: double.infinity,
+                              alignment: Alignment.center,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (buildKeysNotesOrFreqsMode == 1) ...[
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: size.width < pxlsWidth ? fontSize + 2 : fontSize + 6)),
+                                    ),
+                                  ] else if (buildKeysNotesOrFreqsMode == 2) ...[
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: size.width < pxlsWidth ? fontSize + 5 : fontSize + 6)),
+                                    ),
+                                  ] else if (buildKeysNotesOrFreqsMode == 3) ...[
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize - 1)),
+                                    ),
+                                  ] else if (buildKeysNotesOrFreqsMode == 4) ...[
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize - 1)),
+                                    ),
+                                  ] else ...[
+                                    Align(
+                                      alignment: size.width < pxlsWidth ? Alignment.centerRight : Alignment.centerLeft,
+                                      child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey)),
+                                    ),
+                                    Align(
+                                      alignment: size.width < pxlsWidth ? Alignment.centerLeft : Alignment.centerRight,
+                                      child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize)),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+///////////////  Fingering:
+                            if (((soundNum != 0 && stringsNum == 21) || ((soundNum != 0 && soundNum != 21) && stringsNum == 22)) && showLocalFingering == true) ...[
+                              if (buildKeysNotesOrFreqsMode == 5 || prsdBool == true) ...[
+                                if (showFingeringOnButtons[soundNum] == 1)
+                                  InkWell(
+                                    child: CustomPaint(
+                                      size: Size(WIDTH_2, WIDTH_2 * 0.583),
+                                      painter: RPSCustomPainter10(themeappLightDark: themeappLightDark),
+                                    ),
+                                  )
+                                else if (showFingeringOnButtons[soundNum] == 0)
+                                  InkWell(
+                                    child: CustomPaint( // Thumb is some bigger than index (WIDTH_2 + WIDTH_2*0.1)
+                                      size: Size(WIDTH_2 * 1.1, WIDTH_2 * 1.1 * 0.583),
+                                      painter: RPSCustomPainter13(themeappLightDark: themeappLightDark),
+                                    ),
+                                  ),
+                              ],
+                            ] else ...[],
+/////////////// end Fingering
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+//
+      } else if (soundNum ==23) {
+        return Expanded(
+          child: TextButton.icon(
+            style: TextButton.styleFrom(
+              backgroundColor: prsdBool ?  themeappLightDark==1 ? Colors.orange[100] : invertCustom(Colors.orange[100]!) : themeappLightDark==1 ? Colors.orange[50] : invertCustom(Colors.orange[50]!),   //foregroundColor: color,
+              elevation: 2,  //visual effect for button
+            ),
+            onPressed: () {
+              //////////////////////////
+              openInfoPage();
+              //////////////////////////
+              // Open Help Page
+            },
+            onLongPress: () {
+              tryToRunXlsmEditorWin();
+            },
+            icon:  Icon(Jaliinstrument.info, color: themeappLightDark==1 ? Colors.orange : invertCustom(Colors.orange)),
+            label:
+            OverflowBox(
+              maxHeight: double.infinity,
+              alignment: Alignment.center,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text('info', style: TextStyle(fontSize: fontSize_i, color: themeappLightDark==1 ? Colors.black38 : invertCustom(Colors.black38))),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      } else if (soundNum !=23 && showVerticalBigLables == true) {
+        return Expanded(
+          child:
+          Container(),        // empty container
+        );
+      } else {}; // end if
+      throw ''; // non nullable issue resolve
+    } // end expanded build key left
+    Expanded buildKeyRight  (int soundNum, Color color, double fontSize, bool prsdBool, bool showLocalFingering){
+      dynamic keyTuning = visualMarks (selectedtuningNum);
+      // var buttonText = keyTuning[soundNum].values.elementAt(1) + '      ' + keyTuning[soundNum].values.elementAt(3); // Note, Freq
+      var buttonText = keyTuning[soundNum].values.elementAt(1);                                                         // Note
+      var buttonTextCent = keyTuning[soundNum].values.elementAt(2);
+      var freqTextPrecisely = keyTuning[soundNum].values.elementAt(3).toString(); //frequency Precisely (machine heads)
+      var freqTextRoughly = "";
+      if (keyTuning[soundNum].values.elementAt(3) != "") freqTextRoughly = (double.parse((keyTuning[soundNum].values.elementAt(3)))).toStringAsFixed(1); //frequency Roughly (wooden pegs)
+      var DmmTextVariant1 = ""; var DmmTextVariant2 = ""; var lbTextForVariant2 = ""; // lbText is for lbs nylon line parameters in pounds
+      if (stringsDiamMapVariant1[soundNum] != "") DmmTextVariant1 = stringsDiamMapVariant1[soundNum].toString(); // strings diameter, mm
+      if (stringsDiamMapVariant2[soundNum] != "") DmmTextVariant2 = stringsDiamMapVariant2[soundNum].toString(); // strings diameter, mm
+      if (stringsLbMapToVariant2[soundNum] != "") lbTextForVariant2 = stringsLbMapToVariant2[soundNum].toString(); // strings load in lbs
+      //
+      if (showVerticalBigLables==false || (showVerticalBigLables==true && ((soundNum == 0 || soundNum == 21) && stringsNum==21 || (soundNum == 0) && stringsNum==22))) {
+        // showFingeringOnButtons[1] = 1; showFingeringOnButtons[2] = 1;  showFingeringOnButtons[13] = 0; showFingeringOnButtons[15] = 0; // for test
+        return Expanded(
+          child:
+          InkWell (            // with InkWell CustomPainter is x-center aligning correctly, children in textButton all listening onPressed event, stack works correctly
+            child: Stack(      // stack is only to show Fingering under the button Layer   // Stack is like Z-Layers in CSS or transparent Layers in Photoshop. It's a Stack
+              children: <Widget>[
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: color,    // needed !!!
+                    backgroundColor: prsdBool ?  themeappLightDark==1 ? Colors.orange[100] : invertCustom(Colors.orange[100]!) : themeappLightDark==1 ? Colors.orange[50] : invertCustom(Colors.orange[50]!),
+                    elevation: 3,  //visual effect for button, effect disappeared in new SDK
+                  ),
+                  //////////////////////////////////////////////////////////////////////////////////////////////
+                  onPressed: () {  // here was onPressed: () {}   It have been removed to InkWell and replaced by onTap: () {}
+                    if ((soundNum==0 && stringsNum==22) || ((soundNum==0 || soundNum==21) && stringsNum==21))  {
+                      //fillDefaultColorsList(); //CALL
+                      // increasing by One:
+                      buildKeysNotesOrFreqsMode = buildKeysNotesOrFreqsMode + 1;
+                      if (buildKeysNotesOrFreqsMode > 6) {buildKeysNotesOrFreqsMode = 0;} else {}  // condition to setting default buttons view // F G A B C Default
+                      // toDo: shift numbers and add DO RE MI FA SOL LA SI      toDo: add LCM Least Common Multiply for Complexity (see function LCM) gradient button colors
+                      if (buildKeysNotesOrFreqsMode==1) {} else {}                                                                              // Freq Precisely
+                      if (buildKeysNotesOrFreqsMode==2) {} else {}                                                                              // Freq Roughly
+                      if (buildKeysNotesOrFreqsMode==3) {fillVariant1ColorsList();} else {} //CALL                                              // Diam mm var1
+                      if (buildKeysNotesOrFreqsMode==4) {fillVariant2ColorsList();} else {} //CALL                                              // Diam mm var2
+                      if (buildKeysNotesOrFreqsMode==5) {themeappLightDarkChange(false);} else {}                           //CALL              // Fingering Default
+                      if (buildKeysNotesOrFreqsMode==6) {showVerticalBigLables = true;} else {}                                                 // big Labels (vertical text)
+                      if (buildKeysNotesOrFreqsMode==7) {} else {}                                                                              // not used, upper is limit ">6"
+                      if (buildKeysNotesOrFreqsMode==0) {themeappLightDarkChange(false); showVerticalBigLables = false;} else {} //CALL         // Normal:   F G A B C
+                      // ntTableCaptionTxt = buildKeysNotesOrFreqsMode.toString(); //debug
+                      setState(() {}); // Setting State()
+                    } else {
+                      playSound(selectedtuningNum,soundNum,shortOrLongNum,noteVolume,extension);
+                      //harmonicFunctions (soundNum); //Complexity calculates well
+                    };
+                  },
+                  onLongPress: () {
+                    tunerModeEnableByKeyLongPress();
+                  },
+                  //////////////////////////////////////////////////////////////////////////////////////////////
+                  //child: Text('note$soundNum'),
+                  child: InkWell(
+                    child:
+                    MouseRegion(          //restore Win cursor "hand clicks button"
+                      cursor: SystemMouseCursors.click,
+                      child:
+                      Stack(     // stack is only to show Fingering under the button Layer   // Stack is like Z-Layers in CSS or transparent Layers in Photoshop. It's a Stack
+                        alignment: Alignment.center,      // is Solution how to Align center, do not need to change base point of CustomPainter or it's width
+                        children: <Widget>[
+                          OverflowBox(
+                            maxHeight: double.infinity,
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if ((soundNum == 0 && stringsNum == 22) || ((soundNum == 0 || soundNum == 21) && stringsNum == 21)) ...[
+                                  if (buildKeysNotesOrFreqsMode == 0 || buildKeysNotesOrFreqsMode == 1 || buildKeysNotesOrFreqsMode == 5 || buildKeysNotesOrFreqsMode == 6)
+                                    CustomPaint(
+                                      size: Size(WIDTH_2, WIDTH_2 * 0.583),
+                                      painter: RPSCustomPainter2(themeappLightDark: themeappLightDark),
+                                    )
+                                  else if (buildKeysNotesOrFreqsMode == 2)
+                                    CustomPaint(
+                                      size: Size(WIDTH_1, WIDTH_1 * 0.583),
+                                      painter: RPSCustomPainter1(themeappLightDark: themeappLightDark),
+                                    )
+                                  else if (buildKeysNotesOrFreqsMode == 3 || buildKeysNotesOrFreqsMode == 4)
+                                      CustomPaint(
+                                        size: Size(WIDTH_1, WIDTH_1 * 0.583),
+                                        painter: RPSCustomPainter7(themeappLightDark: themeappLightDark),
+                                      ),
+                                ],
+                                if (buildKeysNotesOrFreqsMode == 1)
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(freqTextPrecisely, style: TextStyle(fontStyle: FontStyle.normal, fontSize: size.width < pxlsWidth ? fontSize + 2 : fontSize + 6)),
+                                  )
+                                else if (buildKeysNotesOrFreqsMode == 2)
+                                  Align(
+                                    alignment: Alignment.center,
+                                    child: Text(freqTextRoughly, style: TextStyle(fontStyle: FontStyle.normal, fontSize: size.width < pxlsWidth ? fontSize + 5 : fontSize + 6)),
+                                  )
+                                else if (buildKeysNotesOrFreqsMode == 3)
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(DmmTextVariant1, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize - 1)),
+                                    )
+                                else if (buildKeysNotesOrFreqsMode == 4)
+                                    Align(
+                                      alignment: Alignment.center,
+                                      child: Text(DmmTextVariant2, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize - 1)),
+                                    )
+                                else ...[
+                                    Align(
+                                      alignment: size.width < pxlsWidth ? Alignment.centerLeft : Alignment.centerRight,
+                                      child: Text(buttonTextCent, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSizeCnt, color: Colors.grey)),
+                                    ),
+                                    Align(
+                                      alignment: size.width < pxlsWidth ? Alignment.centerRight : Alignment.centerLeft,
+                                      child: Text(buttonText, style: TextStyle(fontStyle: FontStyle.normal, fontSize: fontSize)),
+                                    ),
+                                  ],
+                              ],
+                            ),
+                          ),
+///////////////  Fingering:
+                          if (((soundNum != 0 && stringsNum == 22) || ((soundNum != 0 && soundNum != 21) && stringsNum == 21)) && showLocalFingering == true) ...[
+                            if (buildKeysNotesOrFreqsMode == 5 || prsdBool == true) ...[
+                              if (showFingeringOnButtons[soundNum] == 1)
+                                InkWell(
+                                  child: CustomPaint(
+                                    size: Size(WIDTH_2, WIDTH_2 * 0.583),
+                                    painter: RPSCustomPainter11(themeappLightDark: themeappLightDark),
+                                  ),
+                                )
+                              else if (showFingeringOnButtons[soundNum] == 0)
+                                InkWell(
+                                  child: CustomPaint( // Thumb is some bigger than index (WIDTH_2 + WIDTH_2*0.1)
+                                    size: Size(WIDTH_2 * 1.1, WIDTH_2 * 1.1 * 0.583),
+                                    painter: RPSCustomPainter14(themeappLightDark: themeappLightDark),
+                                  ),
+                                ),
+                            ],
+                          ] else ...[],
+/////////////// end Fingering
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      } else if (showVerticalBigLables==true && (soundNum != 0 || soundNum != 21)) {
+        return Expanded(
+          child:
+          Container(),        // empty container
+        );
+      }
+      throw ''; // non nullable issue resolve
+    } // end expanded build key right
+//
+//  ///////////////////// MediaQuery parameters ///////////////////
+    double width23  = size.width * 0.23; // for buttons width
+    double width54  = size.width * 0.54; // for notation zone width
+    double width23a = size.width * 0.23;
+    //var buttonHeight = MediaQuery.of(context).size.height/2;
+    /// window.viewPadding.top is for notification bar on Android    // ???
+    /// double statusbarHeight = MediaQuery.of(context).padding.top; // padding.top     is height of bar with clock, battery indicator
+    /// double contextLowerBarHeight = kToolbarHeight;               // kToolbarHeight  is height of home, back, apps lower bar
+    ///////////////////// End MediaQuery parameters ///////////////
+//
+// toDo: sample: abstract class Container ! Call it from widget build
+// // Will be removed Later, No Needed
+    Container buildNtColumn (int bitNum, notationNote, int playingBit){   // building Note Cell, abstract Class "Container"
+      return Container();
+    } // end Container buildNtColumn
+//
+/////////////////////////////////////////////////////////////////////////
+//
+/////////////////////////////////////////////////////////////////////////
+//
+    return MaterialApp(             // returning Material Application
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.noScaling,               // globally ignore system text scaling settings
+          ),
+          child: child!,
+        );
+      },
+      //
+      //////////////////////////// Background of Objects with no specified Colour ///////////
+      //theme: ThemeData(primarySwatch: Colors.brown,), // theme Background     // you can uncomment it // Variant 1
+      // all icons and texts without colour parameters setting are transparent, you will see
+      // background through it, blue background of PlayCircle and Text on buttons is because it!
+      //////////////////////////////////////////////////////////////////////
+      //                           It repeats Twice: see Return MaterialApp (second)
+      //////////////////////////// Background of Objects: custom materialColour  /////////// see TOMaterialColor -> ASMaterialColor  in Glogal Assignment at the beginning
+      theme: ThemeData(primarySwatch: const Color(0xFFC9F5FC).asMaterialColor), // you can uncomment it // Variant 2
+      //////////////////////////////////////////////////////////////////////
+      //
+      //////////////////// Android: Disappering app Title issue resolve //////////////////// Title of the App in opened AppsList of Android
+      title: 'Jalinativeinstrument',
+      //////////////////////////////////////////////////////////////////////////////////////
+      home: SafeArea(
+        child:
+        Scaffold(
+            backgroundColor: themeappLightDark==1 ? Colors.white : Colors.black, // background color of App
+            body:
+            Container(
+/////////////////////////////////////////////////////////////////////////
+              child:
+              InkWell (     // with InkWell CustomPainter is x-center aligning correctly, children in textButton all listening onPressed event, stack works correctly
+                  child:
+                  Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: width23,
+                        child: SizedBox.expand(
+                          child: Stack(
+                            alignment: Alignment.center,      // is Solution how to Align center, do not need to change base point of CustomPainter or it's width
+                            children: <Widget>[
+                              if (showVerticalBigLables == true) ...[
+                                Container(
+                                  child: CustomPaint(
+                                    size: Size(WIDTH_8,(WIDTH_8*8.75).toDouble()), //You can Replace [WIDTH] with your desired width for Custom Paint and height will be calculated automatically
+                                    painter: RPSCustomPainter8(themeappLightDark: themeappLightDark),
+                                  ),
+                                ) ,
+                              ] else ...[],
+                              ValueListenableBuilder<List<Map<String, bool>>>(
+                                valueListenable: _JaliinstrumentState.buttonsNotifier, // maybe "_" came up with to easy find a method
+                                builder: (_, buttonsPS, __) {
+                                  const List<int> leftIndices = [4, 6, 8, 10, 12, 14, 16, 18, 19, 20, 22];
+                                  final bool finger = buttonsPS[24]['fngr']!;
+                                  return Column( // Column with buttons in stack is ABOVE the paintings !!!
+                                    children: [
+                                      for (int i in leftIndices)
+                                        buildKeyLeft(i, keysColorsList[i], fontSize, buttonsPS[i]['prsd']!, finger),
+                                      buildKeyLeft(23, keysColorsList[23], fontSize_i, buttonsPS[23]['prsd']!, finger),
+                                    ],
+                                  );
+                                },
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: width54,
+                        child: SizedBox.expand(
+                          child:
+                          (!isTunerModeEnable) ?
+                          Column(
+                            children: [
+                              InkWell(
+                                child:Align(
+                                  alignment: Alignment.topLeft,
+                                  child:
+                                  Row(
+                                    children:
+                                    [
+                                    RepaintBoundary(
+                                    child:ListenableBuilder(
+                                        listenable: tableProvider,
+                                        builder: (context, child) {
+                                          int  tmpidx  = ntLtn[22];              // Null check on Null value: if you make a mistake in [22] or [23]
+                                          int  tmpidx1 = ntLtn[23];
+                                          int  fontIndicator = 0;
+                                          if(Platform.isWindows) {fontIndicator = 1;}
+                                          else if(Platform.isAndroid) {fontIndicator = 0;}
+                                          else if(Platform.isLinux)   {fontIndicator = 0;}
+                                          else {fontIndicator = 0;}
+                                          return Row (          // mode indicator (three circles utf-8 symbols)        // table caption text, if Platform is Not Windows
+                                            children:
+                                            [  //  if Android, MacOS, Linux:
+                                              Container(height: centralColumnHeaderHeigth, padding: EdgeInsets.only(bottom: 0), child: Text( (!Platform.isWindows) ? ntTableCaptionTxt_0_sym[tmpidx][0] : ntTableCaptionTxt_0_win[tmpidx][0], style: TextStyle(fontFamily: 'Lucida',fontStyle: FontStyle.normal, fontSize: sym_font[fontIndicator], color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber)) ),),
+                                              Container(height: centralColumnHeaderHeigth, padding: EdgeInsets.only(bottom: 0), child: Text( (!Platform.isWindows) ? ntTableCaptionTxt_0_sym[tmpidx][1] : ntTableCaptionTxt_0_win[tmpidx][1], style: TextStyle(fontFamily: 'Lucida',fontStyle: FontStyle.normal, fontSize: sym_font[fontIndicator], color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber)) ),),
+                                              Container(height: centralColumnHeaderHeigth, padding: EdgeInsets.only(bottom: 0), child: Text( (!Platform.isWindows) ? ntTableCaptionTxt_0_sym[tmpidx][2] : ntTableCaptionTxt_0_win[tmpidx][2], style: TextStyle(fontFamily: 'Lucida',fontStyle: FontStyle.normal, fontSize: sym_font[fontIndicator], color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber)) ),),
+                                              Container(height: centralColumnHeaderHeigth, padding: EdgeInsets.only(bottom: 0), child: Text('   ', style: TextStyle(fontStyle: FontStyle.normal, fontSize: 12, color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber)) ),),
+                                              Container(height: centralColumnHeaderHeigth, child: Text(ntTableCaptionTxt, style: TextStyle(fontStyle: FontStyle.normal, fontSize: 12, color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber)) ),),
+                                            ],
+                                          );
+                                        }),
+                                    ),
+                                      ValueListenableBuilder <List<Map<String,String>>> (
+                                          valueListenable: _JaliinstrumentState.strTxtNotifier,
+                                          builder: (context, strTxtNotifierList, __) {
+                                            return
+                                              Container(height: centralColumnHeaderHeigth, child: Text(strTxtNotifierList[0]['ntTableCaptionTxt']!, style: TextStyle(fontStyle: FontStyle.normal, fontSize: 12, color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber)) ),);
+                                          }),
+                                    ],
+                                  ),
+                                ),
+                              ),
+//
+                              InkWell(
+                                child:
+                                Container(
+                                  clipBehavior: Clip.none,
+                                  decoration: BoxDecoration(
+                                    // border: Border.all(
+                                    border: Border(
+                                      left: BorderSide(color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber), width: 0,),
+                                      right: BorderSide(color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber), width: 0,),
+                                      top: BorderSide(color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber), width: 0,),
+                                      bottom: BorderSide(color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber), width: 0,),
+                                      // color: Colors.orange,
+                                      // width: 0,
+                                    ),
+                                    borderRadius: const BorderRadius.only(
+                                        topLeft: Radius.circular(5),
+                                        topRight: Radius.circular(5)),
+                                    //color: Colors.orange,
+                                  ),
+                                  child:
+                                  InkWell(    // with InkWell NO FREEZE When Table View Changes !!!
+                                    onTap: () => onTapFuncChangeTableView(),                  // without ()  we call the method DURING build process, NO Good: memory leak, switches by itself, No good!
+                                    onLongPress: () => onLongPressFuncChangeTableView(),
+                                    child:
+//////// FIRST: ///////////////////// toDo: variable doesn't have to be inside setState(), widget rebuilds with new value of variable after each setState WITHOUT ValueListenableBuilder!!!, even if variable is not inside the setState() !!!
+                                    RepaintBoundary(
+                                      child:ListenableBuilder(
+                                          listenable: tableProvider,
+                                          builder: (context, child) {  //As few assignments of new variables as possible! It slows down!
+                                            final (
+                                            dependsOnMediaWidthSize,   // font-Size  A  B  C  e g f
+                                            posYdependsOnMediaSize,    // letters-shift
+                                            posXdependsOnMediaSize,
+                                            widthDependsOnMediaWIDTH
+                                            ) = calculateMyMetrics(sw1, ntLtn[15]);
+                                            return Table(
+                                                border: TableBorder.all(width: 0, color: themeappLightDark==1 ? Color(0xFFF6EAB4) : invertCustom(Color(0xFFF6EAB4))),  //toDo: uncomment it!
+                                                // border: TableBorder.all(width: 0, color: Colors.black12),  // visible grid, but too thick in Win
+                                                children:
+                                                [
+                                                  for(int i = 0; i <= stringsNum; i++)  TableRow(children: [    // was i < stringsNum     fix: Note F2 was not shown in Table   1 of 2
+                                                    for(int j = ntLtn[2].round(); j < ntLtn[2].round() + ntLtn[21]; j++)
+                                                      if (data1[i][j] != '' && j==ntLtn[3] && ntLtn[5] == 1) ...[
+                                                        Container( // SOLUTION 1 of 4 !!!  RED SCREEN and widget rendering EXCEPTION, endless height of ROWS after Range Change by Slider, CONTAINER NEEDED !!! !!! !!!
+                                                          child:
+                                                          Stack(
+                                                              clipBehavior: Clip.none,
+                                                              children:
+                                                              [
+                                                                Positioned(       // ♩♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩NOTE SYMBOL◍◍◍◍◍NOTE SYMBOL◍◍◍◍◍
+                                                                  bottom: 0,
+                                                                  //top: -15,
+                                                                  top: posYdependsOnMediaSize,
+                                                                  left: posXdependsOnMediaSize,
+                                                                  child:
+                                                                  Container(                      // if not empty and is playingBit, then decorate with another color (contains some Note)
+                                                                    child: Text(data1[i][j].toString(), style: TextStyle(fontSize: dependsOnMediaWidthSize, color: keysColorsList[i])),    // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                    padding: EdgeInsets.all(0),
+                                                                  ),
+                                                                ),
+                                                                Positioned(
+                                                                  child:
+                                                                  Container(                      // if not empty and is playingBit, then decorate with another color (contains some Note)
+                                                                    decoration: BoxDecoration(color: themeappLightDark==1 ? cYellow700 : cYellow700Inv,borderRadius: BorderRadius.circular(heightSupportingSize!+1)),  width: widthDependsOnMediaWIDTH,  height: heightSupportingSize+1, // if not empty, then decorate (contains some Note) // form: circle (the closer the shape of the cell to the square)
+                                                                    child: Text('⬤', style: TextStyle(fontSize: heightSupportingSize, color: keysColorsList[i])),    // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                  ),
+                                                                ),
+                                                              ]
+                                                          ),
+                                                        ),
+                                                      ] else if (data1[i][j] != '') ...[
+                                                        Container( // SOLUTION 2 of 4 !!!  RED SCREEN and widget rendering EXCEPTION, endless height of ROWS after Range Change by Slider, CONTAINER NEEDED !!! !!! !!!
+                                                          child:
+                                                          Stack(
+                                                              clipBehavior: Clip.none,
+                                                              children:
+                                                              [
+                                                                Positioned(       // ♩♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩NOTE SYMBOL◍◍◍◍◍NOTE SYMBOL◍◍◍◍◍
+                                                                  bottom: 0,
+                                                                  //top: -15,
+                                                                  top: posYdependsOnMediaSize,
+                                                                  left: posXdependsOnMediaSize,
+                                                                  child:
+                                                                  Container(                      // if not empty and is playingBit, then decorate with another color (contains some Note)
+                                                                    child: Text(data1[i][j].toString(), style: TextStyle(fontSize: dependsOnMediaWidthSize, color: keysColorsList[i])),    // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                    padding: EdgeInsets.all(0),
+                                                                  ),
+                                                                ),
+                                                                Positioned(
+                                                                  child:
+                                                                  Container(                      // if not empty and is playingBit, then decorate with another color (contains some Note)
+                                                                    decoration: BoxDecoration(color: themeappLightDark==1 ? cOrange600 : cOrange600Inv,borderRadius: BorderRadius.circular(heightSupportingSize!+1)),  width: widthDependsOnMediaWIDTH,  height: heightSupportingSize+1, // if not empty, then decorate (contains some Note) // form: circle (the closer the shape of the cell to the square)                                                                  //child: Text(data1[i][j].toString(), style: TextStyle(fontSize: heightSupportingSize, color: Colors.orange[400])),   // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                    child: Text('⬤', style: TextStyle(fontSize: heightSupportingSize, color: keysColorsList[i])),    // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                  ),
+                                                                ),
+                                                              ]
+                                                          ),
+                                                        ),
+                                                      ] else if(ntLtn[0].round().remainder(ntLtn[21]*2) == 0 && ntLtn[1].round().remainder(ntLtn[21]*4) == 0 && j!=ntLtn[3]) ...[
+                                                        Container(
+                                                          color:   themeappLightDark==1 ? cAmber50 : cAmber50Inv,    // Start: divides by 64, End: divides by 128 && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(ntLtn[0].round() != ntLtn[1].round() && (((ntLtn[0].round())/2 + (ntLtn[4] - 1) * (ntLtn[21]*2) == j && (ntLtn[4] == 1 || ntLtn[4] > 3)) || ((ntLtn[0].round())/2 + 0 + (ntLtn[4] - 1) * (ntLtn[21]*2) == j && (ntLtn[4] == 2 || ntLtn[4] == 3)))  && j!=ntLtn[3]) ...[
+                                                        Container(                  // Border-L Green Range 1st table
+                                                          decoration: BoxDecoration(
+                                                            color:   themeappLightDark==1 ? cLime100 : cLime100Inv,
+                                                            border: Border(
+                                                              left: BorderSide(color: themeappLightDark==1 ? Color(0xffffce4c) : invertCustom(Color(0xffffce4c)),width: ntLtn[15] ==32 ? 2 : 1,),    // width (3) OR width (1) Depends On Columns Number (True 32 /False 64)
+                                                            ),
+                                                          ),                      // Border-L Green Range 1st table (now it's thin Orange)
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),
+                                                        ),
+                                                      ] else if(ntLtn[0].round() != ntLtn[1].round() && (((ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) == j && (ntLtn[4] == 2 || ntLtn[4] == 3)) || ((ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) == j && (ntLtn[4] == 1 || ntLtn[4] > 3)))  && j!=ntLtn[3]) ...[
+                                                        Container(            // Border-R Green Range 1st table
+                                                          decoration: BoxDecoration(
+                                                            color:   themeappLightDark==1 ? cLime100 : cLime100Inv,
+                                                            border: Border(
+                                                              right: BorderSide(color: themeappLightDark==1 ? Color(0xffffce4c) : invertCustom(Color(0xffffce4c)),width: ntLtn[15] ==32 ? 2 : 1,),    // width (3) OR width (1) Depends On Columns Number (True 32 /False 64)
+                                                            ),
+                                                          ),                  // Border-R Green Range 1st table (now it's thin Orange)
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),
+                                                        ),
+                                                      ] else if((ntLtn[0].round())/2 + (ntLtn[4] - 1) * (ntLtn[21]*2)   <= j && j <= (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) && j!=ntLtn[3] && ntLtn[4] == 1) ...[
+                                                        Container(                      // Green Range 1st table (see also: second cond.)
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S + (C-1)*(32*2) < = j < = E - 1 + (C-1)*(32*2) && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(ntLtn[0].round().remainder(ntLtn[21]*2) == 0 && ntLtn[0].round() != ntLtn[21]*2 && ntLtn[1].round().remainder(ntLtn[21]*4) != 0 && j < (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2)  && j!=ntLtn[3] && ntLtn[4] == 1) ...[
+                                                        Container(                      // Green Range 1st table (second condition)
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S: divides by 64 && S != 64 + (C-1)*(32*4) (Not at the Middle Position) && E: Not divides by 128 && j < E + (C-1)*(32*2)
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if((ntLtn[0].round())/2 + 1 + (ntLtn[4] - 1) * (ntLtn[21]*2)   <= j && j <= (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) && j!=ntLtn[3] && ntLtn[4] == 2) ...[
+                                                        Container(                      // Green Range 1st table (see also: second cond.)
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S + 1 + (C-1)*(32*2) < = j < = E + 0 + (C-1)*(32*2) && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(ntLtn[0].round().remainder(ntLtn[21]*2) == 0 && ntLtn[0].round() != ntLtn[21]*2 && ntLtn[1].round().remainder(ntLtn[21]*4) != 0 && j < (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2)  && j!=ntLtn[3] && ntLtn[4] == 2) ...[
+                                                        Container(                      // Green Range 1st table (second condition)
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S: divides by 64 && S != 64 + (C-1)*(32*4) (Not at the Middle Position) && E: Not divides by 128 && j < E + (C-1)*(32*2)
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if((ntLtn[0].round())/2 + 1 + (ntLtn[4] - 1) * (ntLtn[21]*2)   <= j && j <= (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) && j!=ntLtn[3] && ntLtn[4] == 3) ...[
+                                                        Container(                      // Green Range 1st table (see also: second cond.)
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S + 1 + (C-1)*(32*2) < = j < = E + 0 + (C-1)*(32*2) && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(ntLtn[0].round().remainder(ntLtn[21]*2) == 0 && ntLtn[0].round() != ntLtn[21]*2 && ntLtn[1].round().remainder(ntLtn[21]*4) != 0 && j < (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2)  && j!=ntLtn[3] && ntLtn[4] == 3) ...[
+                                                        Container(                      // Green Range 1st table (second condition)
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S: divides by 64 && S != 64 + (C-1)*(32*4) (Not at the Middle Position) && E: Not divides by 128 && j < E + (C-1)*(32*2)
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if((ntLtn[0].round())/2 + 0 + (ntLtn[4] - 1) * (ntLtn[21]*2)   <= j && j <= (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) && j!=ntLtn[3] && ntLtn[4] > 3) ...[
+                                                        Container(                      // Green Range 1st table (see also: second cond.)
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S + (C-1)*(32*2) < = j < = E - 1 + (C-1)*(32*2) && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(ntLtn[0].round().remainder(ntLtn[21]*2) == 0 && ntLtn[0].round() != ntLtn[21]*2 && ntLtn[1].round().remainder(ntLtn[21]*4) != 0 && j < (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2)  && j!=ntLtn[3] && ntLtn[4] > 3) ...[
+                                                        Container(                      // Green Range 1st table (second condition)
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S: divides by 64 && S != 64 + (C-1)*(32*4) (Not at the Middle Position) && E: Not divides by 128 && j < E + (C-1)*(32*2)
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(j==ntLtn[3] && ntLtn[5] == 1 && ntLtn[0].round().remainder(ntLtn[21]*2) == 0 && ntLtn[1].round().remainder(ntLtn[21]*4) == 0) ...[
+                                                        Container(
+                                                          color:   themeappLightDark==1 ? cLime200 : cLime200Inv,    // j: is PlayingBit && msrTgl==1 && S: all the way to the left (divides by 64) && E: all the way to the right (divides by 128)
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(j==ntLtn[3] && ntLtn[5] == 1) ...[
+                                                        Container(                      // Light Cursor 1st table
+                                                          color:   themeappLightDark==1 ? cLime50 : cLime50Inv,     // j: is PlayingBit && msrTgl==1
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else ...[
+                                                        Container(
+                                                          color:   themeappLightDark==1 ? cAmber50 : cAmber50Inv,    // in all other cases
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] // end if[]
+                                                  ]),
+                                                ]
+                                            );
+                                          }),
+                                    ),
+
+                                  ),
+                                ),
+                              ),
+                              InkWell(
+                                child:
+                                Container(
+                                  clipBehavior: Clip.none,
+                                  decoration: BoxDecoration(
+                                    // border: Border.all(
+                                    border: Border(
+                                      left: BorderSide(color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber), width: 0,),
+                                      right: BorderSide(color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber), width: 0,),
+                                      top: BorderSide(color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber), width: 0,),
+                                      bottom: BorderSide(color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber), width: 0,),
+                                      // color: Colors.orange,
+                                      // width: 0,
+                                    ),
+                                    borderRadius: const BorderRadius.only(
+                                        bottomLeft: Radius.circular(50),
+                                        bottomRight: Radius.circular(50)),
+                                    //color: Colors.orange,
+                                  ),
+                                  child:
+                                  InkWell(    // with InkWell NO FREEZE When Table View Changes !!! To Vibration effect off: use gestureDetector class
+                                    onTap: () => onTapFuncChangeTableView(),                  // without ()  we call the method DURING build process, NO Good: memory leak, switches by itself, No good!
+                                    onLongPress: () => onLongPressFuncChangeTableView(),
+                                    child:
+/////// SECOND: // Lower Level of the Table://///////////////
+                                    RepaintBoundary(
+                                      child:ListenableBuilder(
+                                          listenable: tableProvider,
+                                          builder: (context, child) {  //As few assignments of new variables as possible! It slows down!
+                                            final (
+                                            dependsOnMediaWidthSize,   // font-Size  A  B  C  e g f
+                                            posYdependsOnMediaSize,    // letters-shift
+                                            posXdependsOnMediaSize,
+                                            widthDependsOnMediaWIDTH
+                                            ) = calculateMyMetrics(sw1, ntLtn[15]);
+                                            return Table(
+                                                border: TableBorder.all(width: 0, color: themeappLightDark==1 ? Color(0xFFEFEEE1) : invertCustom(Color(0xFFEFEEE1))),  //toDo: uncomment it!
+                                                children:
+                                                [
+                                                  for(int i = 0; i <= stringsNum; i++)  TableRow(children: [    // was i < stringsNum     fix: Note F2 was not shown in Table   2 of 2
+                                                    for(int j = ntLtn[2].round() + ntLtn[21]; j < ntLtn[2].round() + ntLtn[21]*2; j++)
+                                                      if (data1[i][j] != '' && j==ntLtn[3] && ntLtn[5] == 1) ...[
+                                                        Container( // SOLUTION 3 of 4 !!!  RED SCREEN and widget rendering EXCEPTION, endless height of ROWS after Range Change by Slider, CONTAINER NEEDED !!! !!! !!!
+                                                          child:
+                                                          Stack(
+                                                              clipBehavior: Clip.none,
+                                                              children:
+                                                              [
+                                                                Positioned(       // ♩♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩NOTE SYMBOL◍◍◍◍◍NOTE SYMBOL◍◍◍◍◍
+                                                                  bottom: 0,
+                                                                  //top: -15,
+                                                                  top: posYdependsOnMediaSize,
+                                                                  left: posXdependsOnMediaSize,
+                                                                  child:
+                                                                  Container(                      // if not empty and is playingBit, then decorate with another color (contains some Note)
+                                                                    child: Text(data1[i][j].toString(), style: TextStyle(fontSize: dependsOnMediaWidthSize, color: keysColorsList[i])),    // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                    padding: EdgeInsets.all(0),
+                                                                  ),
+                                                                ),
+                                                                Positioned(
+                                                                  child:
+                                                                  Container(                      // if not empty and is playingBit, then decorate with another color (contains some Note)
+                                                                    decoration: BoxDecoration(color: themeappLightDark==1 ? cYellow700 : cYellow700Inv,borderRadius: BorderRadius.circular(heightSupportingSize!+1)),  width: widthDependsOnMediaWIDTH,  height: heightSupportingSize+1, // if not empty, then decorate (contains some Note) // form: circle (the closer the shape of the cell to the square)
+                                                                    child: Text('⬤', style: TextStyle(fontSize: heightSupportingSize, color: keysColorsList[i])),    // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                  ),
+                                                                ),
+                                                              ]
+                                                          ),
+                                                        ),
+                                                      ] else if (data1[i][j] != '') ...[
+                                                        Container( // SOLUTION 4 of 4 !!!  RED SCREEN and widget rendering EXCEPTION, endless height of ROWS after Range Change by Slider, CONTAINER NEEDED !!! !!! !!!
+                                                          child:
+                                                          Stack(
+                                                              clipBehavior: Clip.none,
+                                                              children:
+                                                              [
+                                                                Positioned(       // ♩♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩♩NOTE SYMBOL♩♩♩♩♩♩♩NOTE SYMBOL◍◍◍◍◍NOTE SYMBOL◍◍◍◍◍
+                                                                  bottom: 0,
+                                                                  //top: -15,
+                                                                  top: posYdependsOnMediaSize,
+                                                                  left: posXdependsOnMediaSize,
+                                                                  child:
+                                                                  Container(                      // if not empty and is playingBit, then decorate with another color (contains some Note)
+                                                                    child: Text(data1[i][j].toString(), style: TextStyle(fontSize: dependsOnMediaWidthSize, color: keysColorsList[i])),    // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                    padding: EdgeInsets.all(0),
+                                                                  ),
+                                                                ),
+                                                                Positioned(
+                                                                  child:
+                                                                  Container(                      // if not empty and is playingBit, then decorate with another color (contains some Note)
+                                                                    decoration: BoxDecoration(color: themeappLightDark==1 ? cOrange600 : cOrange600Inv,borderRadius: BorderRadius.circular(heightSupportingSize!+1)),  width: widthDependsOnMediaWIDTH,  height: heightSupportingSize+1, // if not empty, then decorate (contains some Note) // form: circle (the closer the shape of the cell to the square)
+                                                                    child: Text('⬤', style: TextStyle(fontSize: heightSupportingSize, color: keysColorsList[i])),    // in loadTagsFirst() function all notes were replaced with '⬤', filled circle symbol
+                                                                  ),
+                                                                ),
+                                                              ]
+                                                          ),
+                                                        ),
+                                                      ] else if(ntLtn[0].round().remainder(ntLtn[21]*2) == 0 && ntLtn[0].round() != ntLtn[21]*2 && ntLtn[1].round().remainder(ntLtn[21]*4) == 0 && j!=ntLtn[3]) ...[
+                                                        Container(
+                                                          color:   themeappLightDark==1 ? cAmber50 : cAmber50Inv,    // Start: divides by 64 && Start: Not at the Middle Position && End: divides by 128 && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(ntLtn[0].round() != ntLtn[1].round() && (((ntLtn[0].round())/2 + 0 + (ntLtn[4] - 1) * (ntLtn[21]*2) == j && (ntLtn[4] == 1 || ntLtn[4] > 3)) || ((ntLtn[0].round())/2 + 0 + (ntLtn[4] - 1) * (ntLtn[21]*2) == j && (ntLtn[4] == 2 || ntLtn[4] == 3)))  && j!=ntLtn[3]) ...[
+                                                        Container(                      // Border-L Green Range 2nd table
+                                                          decoration: BoxDecoration(
+                                                            color:   themeappLightDark==1 ? cLime100 : cLime100Inv,
+                                                            border: Border(
+                                                              left: BorderSide(color: themeappLightDark==1 ? Color(0xffffce4c) : invertCustom(Color(0xffffce4c)),width: ntLtn[15] ==32 ? 2 : 1,),    // width (3) OR width (1) Depends On Columns Number (True 32 /False 64)
+                                                            ),
+                                                          ),                      // Border-L Green Range 2nd table
+                                                          child: Text(' ', style: TextStyle(fontSize: heightSupportingSize)),
+                                                        ),
+                                                      ] else if(ntLtn[0].round() != ntLtn[1].round() && (((ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) == j && (ntLtn[4] == 2 || ntLtn[4] == 3)) || ((ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) == j && (ntLtn[4] == 1 || ntLtn[4] > 3)))  && j!=ntLtn[3]) ...[
+                                                        Container(                      // Border-R Green Range 2nd table
+                                                          decoration: BoxDecoration(
+                                                            color:   themeappLightDark==1 ? cLime100 : cLime100Inv,
+                                                            border: Border(
+                                                              right: BorderSide(color: themeappLightDark==1 ? Color(0xffffce4c) : invertCustom(Color(0xffffce4c)),width: ntLtn[15] ==32 ? 2 : 1,),    // width (3) OR width (1) Depends On Columns Number (True 32 /False 64)
+                                                            ),
+                                                          ),                      // Border-R Green Range 2nd table
+                                                          child: Text(' ', style: TextStyle(fontSize: heightSupportingSize)),
+                                                        ),
+                                                      ] else if((ntLtn[0].round())/2 + 0 + (ntLtn[4] - 1) * (ntLtn[21]*2) <= j && j <= (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) && j!=ntLtn[3] && ntLtn[4] == 1) ...[
+                                                        Container(                      // Green Range 2nd table
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S + 0 + (C-1)*(32*2) < = j < = E - 1 + (C-1)*(32*2) && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if((ntLtn[0].round())/2 + 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) <= j && j <= (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) && j!=ntLtn[3] && ntLtn[4] == 2) ...[
+                                                        Container(                      // Green Range 2nd table
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S + 1 + (C-1)*(32*2) < = j < = E - 1 + (C-1)*(32*2) && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if((ntLtn[0].round())/2 + 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) <= j && j <= (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) && j!=ntLtn[3] && ntLtn[4] == 3) ...[
+                                                        Container(                      // Green Range 2nd table
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S + 1 + (C-1)*(32*2) < = j < = E - 1 + (C-1)*(32*2) && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if((ntLtn[0].round())/2 + 0 + (ntLtn[4] - 1) * (ntLtn[21]*2) <= j && j <= (ntLtn[1].round())/2 - 1 + (ntLtn[4] - 1) * (ntLtn[21]*2) && j!=ntLtn[3] && ntLtn[4] > 3) ...[
+                                                        Container(                      // Green Range 2nd table
+                                                          color:   themeappLightDark==1 ? cLime100 : cLime100Inv,    // S + 0 + (C-1)*(32*2) < = j < = E - 1 + (C-1)*(32*2) && j: is Not PlayingBit
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(j==ntLtn[3] && ntLtn[5] == 1 && ntLtn[0].round().remainder(ntLtn[21]*2) == 0 && ntLtn[1].round().remainder(ntLtn[21]*4) == 0) ...[
+                                                        Container(
+                                                          color:   themeappLightDark==1 ? cLime200 : cLime200Inv,    // j: is PlayingBit && msrTgl==1 && S: all the way to the left && E: all the way to the right
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else if(j==ntLtn[3] && ntLtn[5] == 1) ...[
+                                                        Container(                      // Light Cursor 2nd table
+                                                          color:   themeappLightDark==1 ? cLime50 : cLime50Inv,     // j: is PlayingBit && msrTgl==1
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] else ...[
+                                                        Container(
+                                                          color:   themeappLightDark==1 ? cAmber50 : cAmber50Inv,    // in all other cases
+                                                          child:   Text(' ', style: TextStyle(fontSize: heightSupportingSize)),  // small text color is the same as the cell colour, text will not be visible
+                                                        ),
+                                                      ] // end if[]
+                                                  ]),
+                                                ]
+                                            );
+                                          }),
+                                    ),
+                                  ),
+                                ),
+                              ),
+/////// End Both Tables ////////////////////////////////////////////////////////////////////////////
+//
+                              if (!hideControlsForScreenshotMode) ...[
+                                SliderTheme(                                                      // Range Slider (Dynamically changes Range of one of the 3rd views independent)
+                                  data: SliderTheme.of(context).copyWith(
+                                    activeTrackColor: themeappLightDark==1 ? Colors.brown[200] : invertCustom(Colors.brown[200]!),
+                                    inactiveTrackColor: themeappLightDark==1 ? Colors.brown[50] : invertCustom(Colors.brown[50]!),
+                                    //inactiveTrackColor: Colors.white,
+                                    trackShape: RectangularSliderTrackShape(),
+                                    trackHeight: 1.0,
+                                    disabledInactiveTrackColor: themeappLightDark==1 ? Colors.brown[50] : invertCustom(Colors.brown[50]!),
+                                    thumbColor: themeappLightDark==1 ? Colors.brown[50] : invertCustom(Colors.brown[50]!),
+                                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8.0),
+                                    overlayColor: themeappLightDark==1 ? Colors.red.withAlpha(32) : invertCustom(Colors.red.withAlpha(32)),
+                                    overlayShape: RoundSliderOverlayShape(overlayRadius: 28.0),
+                                    //showValueIndicator: ShowValueIndicator.never,
+                                    valueIndicatorColor: themeappLightDark==1 ? Colors.brown[200] : invertCustom(Colors.brown[200]!),
+                                  ),
+                                  child:
+                                  Stack(
+                                    children: <Widget>[                 // Container is OVER the painting, because it is LAST in the List
+                                      if (showArrowMoveToTheLeft==true) ...[
+                                        Container(
+                                          child:
+                                          CustomPaint(
+                                            size: Size(WIDTH_15,(WIDTH_15*0.383).toDouble()), //You can Replace [WIDTH] with your desired width for Custom Paint and height will be calculated automatically
+                                            painter: RPSCustomPainter15(themeappLightDark: themeappLightDark),
+                                          ),
+                                        ) ,
+                                      ] else ...[],
+                                      Container( child:
+                                        RepaintBoundary(
+                                        child:ListenableBuilder(
+                                            listenable: tableProvider,
+                                            builder: (context, child) {
+                                              double? doubleVar1 = (ntLtn[0]).toDouble();   //to prevent Null check on Null value
+                                              double? doubleVar2 = (ntLtn[1]).toDouble();
+                                              return RangeSlider(
+                                                values: RangeValues(doubleVar1, doubleVar2),
+                                                /////////////////////////////////////////////////////////////////////////////
+                                                //       // max: (4*ntLtn[21]).toDouble(),   // 128        // try to fix incorrect view change after tables both onTap
+                                                //       max: (rngEnd).toDouble(),
+                                                //       // divisions: 2*(ntLtn[21].toInt()),         // 64
+                                                //     //divisions: (rngEnd/2).round(),   // works fine
+                                                //     //divisions: (rngEnd/2).toInt(),
+                                                //       divisions: (rngEnd~/2),          // ~~~~~~~~~~~~//////////// divide evenly    ~/      (~)
+                                                //////////////////////////////////////////////////////////////////////////////
+                                                // max: (4*ntLtn[21]).toDouble(),   // 128
+                                                max: (ntLtn[20]).toDouble(),
+                                                // divisions: 2*ntLtn[21],          // 64
+                                                divisions: ((ntLtn[20])/2).toInt(),
+                                                //////////////////////////////////////////////////////////////////////////////
+                                                // was working without "min" parameter at all, then added min (when switched from range 32...64 occured Start error). Min is unnecessary instance.
+                                                //min: isSwitched_32_64_128==64 ? 0.0 : 0.0, // allways zero: if mode is 64 or not
+                                                min: 0.0,
+                                                labels: RangeLabels(
+                                                  (ntLtn[0]).toString(),
+                                                  (ntLtn[1]).toString(),
+                                                ),
+                                                onChanged: (RangeValues values1) {
+                                                  cnslDelay1Ntfr.value = true;
+                                                  // ntLtn[0] = values1.start.round(); //works fine
+                                                  // ntLtn[1] = values1.end.round();
+                                                  ntLtn[0] = values1.start.toInt();
+                                                  ntLtn[1] = values1.end.toInt();
+                                                  //ntNtn.value = ntLtn;
+                                                  tableProvider.refresh();
+                                                  tablesBothOnTap(false, true); tablesBothOnTap(false, true); // 1-st and 2-nd tap  //   fix 1) Changes Monitor button reset the Range, 2) suggest to clear range at slider right position
+                                                  //loading__3264_or_64128(); // CALL
+                                                  //setState(() {});
+                                                  //await setDataSharedPref(); // CALL
+                                                  switchRangeEndDependsColsNumb();    // fix: clear range suggestion not only in 64, but in 32 and 128 views
+                                                  fromTheBeginBySliderCoincidence(); // contains setState()
+                                                  setDataSharedPref(); // CALL    // Setting 16 parameters, including slider's Range into Shared Preferences
+                                                },  //end onChanged
+                                              );
+                                            })),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+//
+/////////////////////////////////////////DropDown Menu Part////////////////////////////////////////
+                                Container(
+                                  //margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),   // general margins from all edges sets here
+                                  margin: const EdgeInsets.only(left: 4.0, right: 4.0, top: 4.0, bottom: 4.0),   // general margins from all edges sets here
+                                  child:
+                                  Row(         // toDo: "DropdownTuningBox" is a Class from "dropdown...dart" file, adjacent to our file
+                                    children: [
+                                      Text("M", style: TextStyle(fontSize: 14, color: themeappLightDark==1 ? Colors.amber[300] : invertCustom(Colors.amber[300]!), fontWeight: FontWeight.bold)),     // "Scale" replaced with "Mode"
+                                      Text("ode:", style: TextStyle(fontSize: 14, color: themeappLightDark==1 ? Colors.amber : invertCustom(Colors.amber))),     // "Scale" replaced with "Mode"
+                                      const SizedBox(width: 1),     // used as a "spacer"
+                                      Expanded(child:
+                                      MouseRegion(          //replaced pointer cursor with Win cursor "hand clicks button"
+                                        cursor: SystemMouseCursors.click,
+                                        child:              // here 1) getting value from a widget 2) callBack function, 3)we are sending the value to the widget from another file
+                                        DropdownTuningBox(dropdownValue,                        // Constructor 1
+                                          callBack: (valueFromDropDown) =>{     // Constructor 2 // Here creates a New class exemplar from the Other dart-file locates in lib: dropdown_tuningFromDropDown_box.dar
+                                            setState(() {
+                                              dropdownValue = valueFromDropDown;
+                                              //MapEntry tuneMapEntry = tuneMap.entries.firstWhere((element) => element.value==valueFromDropDown);
+                                              selectedtuningNum = tuneMapRvrsd[dropdownValue]!.round();
+                                            }),
+                                          },    // end Constructor 2
+                                          themeAppLightDarkVariant: themeappLightDark, // Constructor 3
+                                          tuningListMainToDropdown_1: droptuningList,    // Constructor 4
+                                        ),
+                                      ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+///////////////////////////////////////End DropDown Menu Part/////////////////////////////////////
+                                Row(
+                                    children: [
+                                      Switch(
+                                        value: isSwitchedMonitorFile,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            isSwitchedMonitorFile = value;  //print(isSwitchedMonitorFile);
+                                            if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == false) {LoadCSVBtnTx='Changes monitor';MonitorFile();} else if(isSwitchedMonitorFile==true && willGoogleSpreadsheetBeLoaded == true) {LoadCSVBtnTx='Online spreadsheet monitor';MonitorFile();} else {LoadCSVBtnTx='Load csv/tsv file, web';} //end if
+                                          });
+                                        },
+                                        activeTrackColor: themeappLightDark==1 ? Colors.lightGreen[100] : invertCustom(Colors.lightGreen[100]!),
+                                        activeColor: themeappLightDark==1 ? Colors.lightGreen[300] : invertCustom(Colors.lightGreen[300]!),
+                                        inactiveTrackColor:  themeappLightDark==1 ? Colors.lightGreen[50] : invertCustom(Colors.lightGreen[50]!),
+                                        inactiveThumbColor:  themeappLightDark==1 ? Colors.lightGreen[200] : invertCustom(Colors.lightGreen[200]!),
+                                        //
+                                        trackOutlineColor: WidgetStateProperty.resolveWith( // works from flutter v3.10 and newer
+                                              (final Set<WidgetState> states) {
+                                            if (states.contains(WidgetState.selected)) {
+                                              return null;
+                                            }
+                                            if(themeappLightDark==1) {return Color(0xD9BC86D6);} else {return invertCustom(Color(0xD9BC86D6));}
+                                          },
+                                        ),
+                                        // trackOutlineColor: MaterialStateProperty.resolveWith<Color?>((Set<MaterialState> states) {    // not work ???
+                                        //   if (states.contains(MaterialState.disabled)) {
+                                        //     return Colors.lightGreen[200];
+                                        //   }
+                                        //   return null; // Use the default color.
+                                        // }),
+                                      ),
+                                      Expanded(child:
+                                      ConstrainedBox(
+                                        constraints:BoxConstraints(
+                                          minHeight:45,		 // minHeight of the Box and TextButton
+                                        ),
+                                        child:
+                                        TextButton.icon(
+                                          style: TextButton.styleFrom(
+                                            backgroundColor: themeappLightDark==1 ? Colors.orange[50] : invertCustom(Colors.orange[50]!), elevation: 2, //foregroundColor: color,
+                                          ),
+                                          onPressed: (){
+                                            //print('isSwitchedMonitorFile $isSwitchedMonitorFile ; fromTheBegin $fromTheBegin');
+                                            showArrowMoveToTheLeft=false;                     // hide Arrow "Move Left"
+                                            setState(() { userAbortedLoadCSV = false;  });
+                                            if(isSwitchedMonitorFile==true && fromTheBegin==false) {
+                                              MonitorFile();
+                                            } else if (fromTheBegin==true) {
+                                              argument0 = ''; setState(() {});// Needed!  Better if arguments[0]='' but it is visible only in void main()
+                                              //ntLtn = [...ntNtn.value];
+                                              ntLtn[2] = 0;
+                                              ntLtn[3] = 0;
+                                              ntLtn[4] = 1;
+                                              ntLtn[5] = 0;
+                                              ntLtn[6] = 1;
+                                              ntLtn[7] = 1;
+                                              ntLtn[8] = 1;
+                                              ntLtn[1] = ntLtn[21]*4;  // resetting Range Slider
+                                              //ntNtn.value = ntLtn;
+                                              tableProvider.refresh();
+                                              setDataSharedPref();
+                                              if (csvMode==1) {MonitorFile();} else if (csvMode==2) {loadCSV(file1);} else {pickUpCSV();}  //(1: for Android, Win; 2: for Web variant)
+                                            } else {
+                                              if (csvMode==1) {pickUpCSV();} else if (csvMode==2) {loadCSV(file1);} else {pickUpCSV();}  //(1: for Android, Win; 2: for Web variant)
+                                            } //end if
+                                            //
+                                            //if (isSwitchedMonitorFile!=true) {argument0 = ''; setState(() {});} else {} // Needed!  Better if arguments[0]='' but it is visible only in void main()
+                                            //
+                                          },
+                                          onLongPress: (){    // show widget with input field to paste http adress of the shared Google Spreadsheet with notation
+                                            showArrowMoveToTheLeft=false;                     // hide Arrow "Move Left"
+                                            setState(() { userAbortedLoadCSV = false;  });
+                                            if(isSwitchedMonitorFile==false && fromTheBegin==false) {
+                                              willGoogleSpreadsheetBeLoaded = true; setState(() {});
+                                              readGoogleSpreadsheetDialog();    // load notation from Google Spreadsheet
+                                            } else {}
+                                          }, // end onLongPress
+                                          //child: Text('----'),
+                                          //////////////////////////////////////  nested ternary operator:
+                                          icon: fromTheBegin==false?   (isSwitchedMonitorFile==false ? Icon(Jaliinstrument.add_circle_outline, color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6))) : Icon(Jaliinstrument.refresh)) :  Icon(Jaliinstrument.loop_alt, color: Color(0xD9BC86D6)),
+                                          //////////////////////////////////////
+                                          label: Align(
+                                            alignment: Alignment.centerRight,
+                                            //child: Text(LoadCSVBtnTx, style: const TextStyle(fontSize: 18.0, color: Color(0xD9BC86D6)),),
+                                            child: Text(LoadCSVBtnTx, style:  TextStyle(fontSize: (double.tryParse(size.width.toString()))! * 0.0039 + (double.tryParse(size.height.toString()))! * 0.0018 + 13, color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6))),),
+                                          ),
+                                        ),
+                                      ),
+                                      ),
+                                    ]
+                                ),
+//
+//
+                                ConstrainedBox(
+                                  constraints:BoxConstraints(
+                                    minHeight:55,		 // minHeight of the Box and TextButton
+                                  ),
+                                  child:
+                                  TextButton.icon(       //toDo: change play button style
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: themeappLightDark==1 ? Colors.orange[50] : invertCustom(Colors.orange[50]!),
+                                      //backgroundColor: toggleIcnMsrBtn ? Colors.lightGreen[700] : Colors.grey[600],
+                                      elevation: 2,
+                                    ),
+                                    autofocus: (Platform.isWindows || Platform.isLinux || Platform.isMacOS) ? true : false,     // works fine, use Enter/Space button to Play
+                                    onPressed: ()  async {      // ASYNC added, AWAiT playFromList()  added
+                                      if (toggleIcnMsrBtn) {
+                                        setState(() {toggleIcnMsrBtn = !toggleIcnMsrBtn;});
+                                        //ntLtn = [...ntNtn.value];
+                                        ntLtn[5] = 1;
+                                        //ntNtn.value = ntLtn;
+                                        tableProvider.refresh();
+                                        showVerticalBigLables = false; setState(() {});   // hide big labels, show buttons
+                                        await playFromList (0);       // ASYNC added, AWAiT playFromList()  added
+                                      } else {
+                                        setState(() {toggleIcnMsrBtn = true;});
+                                        //ntLtn = [...ntNtn.value];
+                                        ntLtn[5] = 0;
+                                        //ntNtn.value = ntLtn;
+                                        tableProvider.refresh();
+                                      } // end if
+                                      setState(() {
+                                        //ntLtn = [...ntNtn.value];
+                                        isSwitched_32_64_128 = ntLtn[15];
+                                        mode_3264_or_64128 = ntLtn[16];
+                                      });
+                                    }, // end onPressed
+                                    icon: toggleIcnMsrBtn ? Icon(Jaliinstrument.play_circle2, color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6))) : Icon(Jaliinstrument.stop, color: themeappLightDark==1 ? Color(0xd6f9af1e) : invertCustom(Color(0xd6f9af1e))),
+                                    label: Align(
+                                      alignment: Alignment.centerRight,
+                                      child:
+                                      RepaintBoundary(
+                                        child:ListenableBuilder(
+                                            listenable: tableProvider,
+                                            builder: (context, child) {  // Fo example: "Measures 001-054"  (measures numbers with Leading Zeroes). On most smartphones the button text will become two-line
+                                              measureBtnTx = '${(ntLtn[4]*2-1).toString().padLeft(3, '0')} - ${(maxNotEmptyPos / ntLtn[21]).ceil().toString().padLeft(3, '0')} Measures';
+                                              //return Text(measureBtnTx, style: TextStyle(fontSize: 20.0, color: Color(0xD9BC86D6)),);
+                                              return Text(measureBtnTx, style: TextStyle(fontSize: (double.tryParse(size.width.toString()))! * 0.0039 + (double.tryParse(size.height.toString()))! * 0.0018 + 15, color: themeappLightDark==1 ? Color(0xD9BC86D6) : invertCustom(Color(0xD9BC86D6))),);
+                                            }
+                                        ),),
+                                    ),
+                                  ),
+                                ),
+                                if(showNavButtonsForThreeSeconds) ...[
+                                  Row(
+                                    children: [
+                                      Stack(
+                                        children: <Widget>[
+                                          CustomPaint(
+                                            size: Size(WIDTH_0, WIDTH_0 * 0.583),
+                                            painter: RPSCustomPainter5(themeappLightDark: themeappLightDark),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              decreaseMeasureByButton();
+                                            },
+                                            child: const Text(''),
+                                          ),
+                                        ],
+                                      ),
+                                      Stack(
+                                        children: <Widget>[
+                                          CustomPaint(
+                                            size: Size(WIDTH_0, WIDTH_0 * 0.583),
+                                            painter: RPSCustomPainter6(themeappLightDark: themeappLightDark),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              increaseMeasureByButton();
+                                            },
+                                            child: const Text(''),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ] else ...[
+//
+                                ],
+//
+//
+                                SliderTheme(                                            // Tempo Slider
+                                  data: SliderTheme.of(context).copyWith(
+                                    activeTrackColor: themeappLightDark==1 ? Colors.blueGrey[200] : invertCustom(Colors.blueGrey[200]!),
+                                    inactiveTrackColor: themeappLightDark==1 ? Colors.blueGrey[100] : invertCustom(Colors.blueGrey[100]!),
+                                    trackShape: RectangularSliderTrackShape(),
+                                    trackHeight: 2.0,
+                                    thumbColor: themeappLightDark==1 ? Colors.blueGrey[50] : invertCustom(Colors.blueGrey[50]!),
+                                    thumbShape: RoundSliderThumbShape(enabledThumbRadius: 8.0),
+                                    overlayColor: themeappLightDark==1 ? Colors.blue.withAlpha(32) : invertCustom(Colors.blue.withAlpha(32)),
+                                    overlayShape: RoundSliderOverlayShape(overlayRadius: 28.0),
+                                    //showValueIndicator: ShowValueIndicator.never,
+                                    valueIndicatorColor: themeappLightDark==1 ? Colors.blueGrey[200] : invertCustom(Colors.blueGrey[200]!),
+                                  ),
+                                  child: Container(
+                                    child: Slider(
+                                      focusNode: FocusNode(),   // solved issue: "Highlighting remains visible after changes to Slider and DropdownButton widgets"
+                                      autofocus: false,         // solved issue: "Slider overlay and value indicator interactive behavior on desktop"
+                                      value: crntSldrValT,
+                                      min: 0.1,
+                                      max: 1.1,
+                                      divisions: 10,
+                                      label: crntSldrValT.toStringAsFixed(1), //toDo: add Log or Exp Label
+                                      onChanged: isTempoSliderDisabled?null:(double valueS) {            // added slider-disable option, was   onChanged: (double valueS) {
+                                        // if(    !Platform.isLinux    ) {playerInitWithEmptyNote();} else {}  // initialize player and wait 0.8 seconds
+                                        setState(() {
+                                          crntSldrValT = valueS;
+                                        }); //end setState
+                                      },  //end onChanged
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[], // end if (hideControlsForScreenshotMode)
+//
+                              InkWell(
+                                onTap: (){
+                                  if (hideControlsForScreenshotMode) {
+                                    if (toggleIcnMsrBtn) {
+                                      setState(() {toggleIcnMsrBtn = !toggleIcnMsrBtn;});
+                                      //ntLtn = [...ntNtn.value];
+                                      ntLtn[5] = 1;
+                                      //ntNtn.value = ntLtn;
+                                      tableProvider.refresh();
+                                      playFromList (0);
+                                    } else {
+                                      setState(() {toggleIcnMsrBtn = true;});
+                                      //ntLtn = [...ntNtn.value];
+                                      ntLtn[5] = 0;
+                                      //ntNtn.value = ntLtn;
+                                      tableProvider.refresh();
+                                    } // end if
+                                  } else {
+                                    showNavButtonsForSomeSeconds();
+                                    //
+                                  } // end if (screenshot Mode entered)
+                                  setState(() {
+                                    //ntLtn = [...ntNtn.value];
+                                    isSwitched_32_64_128 = ntLtn[15];
+                                    mode_3264_or_64128 = ntLtn[16];
+                                  });
+                                },
+                                onLongPress: () {
+                                  hideControlsForScreenshotModeByLongPress();
+                                },
+                                child:
+                                Align (
+                                  alignment: Alignment.topCenter,
+                                  child:
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    child:
+                                    Text(
+                                      tempperformrsInfo,
+                                      style: TextStyle(fontFamily: 'Google_GHR', fontSize: 28.0, color: themeappLightDark==1 ? Colors.black87 : Colors.orange),
+                                      overflow: TextOverflow.fade,    // fade if it does not fit in width   (fading the end of the text)
+                                      //overflow: TextOverflow.clip,
+                                      softWrap: true,
+                                    ), //Google_GHR, see pubspec.yaml
+                                  ),
+                                  //Text(tempperformrsInfo, style: TextStyle(fontStyle: FontStyle.normal)),
+                                ),
+                              ),
+                              if (hideControlsForScreenshotMode) ...[
+                                Align (
+                                  alignment: Alignment.topCenter,
+                                  child:
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    child:
+                                    RepaintBoundary(
+                                    child:ListenableBuilder(
+                                        listenable: tableProvider,
+                                        builder: (context, child) {
+                                          return Text('${ntLtn[4]*2-1}', style: TextStyle(fontSize: 58.0, color: themeappLightDark==1 ? Colors.black87 : invertCustom(Colors.black26)));
+                                        }
+                                    ),),
+                                  ),
+                                  //Text(tempperformrsInfo, style: TextStyle(fontStyle: FontStyle.normal)),
+                                ),
+                              ] else ...[], //end if (hideControlsForScreenshotMode) second
+                              // Container(
+                              //   child:
+                              //   CustomPaint(
+                              //     size: Size(WIDTH_0,(WIDTH_0*0.583).toDouble()), //You can Replace [WIDTH] with your desired width for Custom Paint and height will be calculated automatically
+                              //     painter: RPSCustomPainter1(),
+                              //   ),
+                              // ) ,
+                            ],
+                          ) :
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ pitch_detector (tuner) with audio_capture  4 of 4
+                          Column(children: [
+                            Center(
+                                child: Text(
+                                  currDetectedNote,
+                                  style: TextStyle(
+                                      color: themeappLightDark==1 ? Color.fromARGB(255, 236, 162, 9) : invertCustom(Color.fromARGB(255, 236, 162, 9)),
+                                      fontSize: 25.0,
+                                      fontWeight: FontWeight.bold),
+                                )),
+                            const Spacer(),
+                            Center(
+                                child: Text(
+                                  currTuneStatus,
+                                  style: TextStyle(
+                                    //color: Colors.black87,
+                                      color: themeappLightDark==1 ? Color.fromARGB(255, 168, 116, 3) : invertCustom(Color.fromARGB(255, 168, 116, 3)),
+                                      fontSize: 18.0,                                   // was 18.0
+                                      fontWeight: FontWeight.bold),
+                                )),
+                            Expanded(
+                                child: Row(
+                                  children: [
+                                    Expanded(
+                                        child: Center(
+                                            child: FloatingActionButton(
+                                                onPressed: _startCapture,
+                                                child: const Text("Start")))),
+                                    Expanded(
+                                        child: Center(
+                                            child: FloatingActionButton(
+                                                onPressed: _stopCapture, child: const Text("Stop")))),
+                                  ],
+                                )),
+                            const Spacer(),
+                            Center(
+                                child: Text(
+                                  tunerNotSupportedTextPlatformDepending,
+                                  style: TextStyle(
+                                    //color: Colors.black87,
+                                      color: themeappLightDark==1 ? Color.fromARGB(255, 168, 116, 3) : invertCustom(Color.fromARGB(255, 168, 116, 3)),
+                                      fontSize: 16.0,
+                                      fontWeight: FontWeight.bold),
+                                )),
+                          ]),
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ end pitch_detector (tuner) with audio_capture  4 of 4
+                        ),
+                      ),
+//
+                      SizedBox(
+                        width: width23a,
+                        child: SizedBox.expand(
+                          child: Stack(
+                            alignment: Alignment.center,      // is Solution how to Align center, do not need to change base point of CustomPainter or it's width
+                            children: <Widget>[
+                              if (showVerticalBigLables == true) ...[
+                                Container(
+                                  child: CustomPaint(
+                                    size: Size(WIDTH_8,(WIDTH_8*8.75).toDouble()), //You can Replace [WIDTH] with your desired width for Custom Paint and height will be calculated automatically
+                                    painter: RPSCustomPainter9(themeappLightDark: themeappLightDark),
+                                    //painter: (size.width <= pxlsWidth) ? RPSCustomPainter9() : RPSCustomPainter9a(),    // Left-Aligned or Variant1 (for wide media query)
+                                  ),
+                                ) ,
+                              ] else ...[
+                                //
+                              ],
+                              ValueListenableBuilder<List<Map<String, bool>>>(
+                                valueListenable: _JaliinstrumentState.buttonsNotifier, // maybe "_" came up with to easy find a method
+                                builder: (_, buttonsPS, __) {
+                                  const List<int> indices = [0, 1, 2, 3, 5, 7, 9, 11, 13, 15, 17];
+                                  final bool commonFinger = buttonsPS[24]['fngr']!;
+                                  return Column( // Column is above the paintings !!! To buttons may work!
+                                    children: [
+                                      for (int i in indices)
+                                        buildKeyRight(i, keysColorsList[i], fontSize, buttonsPS[i]['prsd']!, commonFinger),
+                                      if (stringsNum == 21)
+                                        buildKeyRight(0, keysColorsList[0], fontSize, buttonsPS[0]['prsd']!, false)
+                                      else if (stringsNum == 22)
+                                        buildKeyRight(21, keysColorsList[21], fontSize, buttonsPS[21]['prsd']!, false),
+                                    ],
+                                  );
+                                },
+                              )
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+              ),
+////////////////////////////////////////////////////////////////////////
+            )
+        ),
+      ),
+    );
+//
+} // end Widget build()
+//
